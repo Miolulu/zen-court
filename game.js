@@ -103,9 +103,11 @@ function applyGameMaterials(root, tint) {
 }
 
 // ===================== 配置 =====================
+// ws 同源动态生成；托管网关要求升级请求带上页面的 sharecode（没有就直连，本地/Pages 单人模式）
+const WS_SC = (() => { const s = new URLSearchParams(location.search).get('sharecode'); return s ? ('?sharecode=' + encodeURIComponent(s)) : ''; })();
 const CONFIG = {
   USE_REMOTE: true,
-  WS_URL: (location.protocol === 'https:' ? 'wss://' : 'ws://') + (location.host || 'localhost:8787'),
+  WS_URL: (location.protocol === 'https:' ? 'wss://' : 'ws://') + (location.host || 'localhost:8787') + WS_SC,
   REACH: 2.6,                 // 交互半径：超出就必须先走过去
   WALK_SPEED: 3.6,
   SAVE_KEY: 'zen-court-save-v1',
