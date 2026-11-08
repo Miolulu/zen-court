@@ -77,14 +77,20 @@ function makeHandsRig(hands, sleeves) {
 function handsRigApply(h, rig, k) {
   if (!h || !rig || !rig.home) return;
   const e = k * k * (3 - 2 * k);   // smoothstep：起步慢、合拢快
-  h.position.set(rig.home.pos.x, rig.home.pos.y - 0.5 * (1 - e), rig.home.pos.z + 0.05 * (1 - e));
-  h.rotation.set(rig.home.rot.x + 0.55 * (1 - e), rig.home.rot.y, rig.home.rot.z);
-  const s = 0.92 + 0.08 * e;
+  // GLB 里双手的家位在袍身内侧（胸口 z≈0.52 < 袍面 z≈0.62），
+  // 合十时要把整组手「向前穿出袍面 + 微微上抬」，才看得见捧珠合十
+  h.position.set(
+    rig.home.pos.x,
+    rig.home.pos.y + 0.06 * e - 0.30 * (1 - e),
+    rig.home.pos.z + 0.24 * e + 0.02 * (1 - e)
+  );
+  h.rotation.set(rig.home.rot.x - 0.12 * e + 0.5 * (1 - e), rig.home.rot.y, rig.home.rot.z);
+  const s = 1 + 0.14 * e;
   h.scale.set(rig.home.scale.x * s, rig.home.scale.y * s, rig.home.scale.z * s);
   rig.sleeves.forEach((sl, i) => {
-    const sgn = i === 0 ? 1 : -1;   // 左袖向右抬、右袖向左抬，朝中线合拢
-    sl.rotation.z = rig.rest[i] + sgn * 0.42 * e;
-    sl.rotation.x = 0.5 * e;        // 袖口向前上方翻，像手臂正在抬起来
+    const sgn = i === 0 ? 1 : -1;   // 左袖向右、右袖向左，袖口向中线合拢抬起
+    sl.rotation.z = rig.rest[i] + sgn * 0.35 * e;
+    sl.rotation.x = 0.32 * e;       // 袖口向前上方翻，像手臂正在抬起来
   });
 }
 function applyGameMaterials(root, tint) {
@@ -116,7 +122,8 @@ const META = {
   lamp:    { name: '长明灯', verb: '点一盏灯', gain: 3, focus: true },
   incense: { name: '香炉',   verb: '上一炷香', gain: 3, focus: true },
   pet:     { name: '庙里的猫', verb: '撸一撸', gain: 1, focus: true },
-  coin:    { name: '荷池金蟾', verb: '抛一枚硬币', gain: 1, focus: true }
+  coin:    { name: '荷池金蟾', verb: '抛一枚硬币', gain: 1, focus: true },
+  sweep:   { name: '落叶堆', verb: '扫一扫', gain: 2 }
 };
 // 布局对齐 sansatemple「清缘堂」：正中一尊大佛 + 佛后壁画 + 佛前供桌 + 中轴香炉 + 成排拜垫。
 // 原站每排 10 垫、共 10 排 100 席（对应单房 100 人，fr(i): x=(e-5)*2.4/(e-4)*2.4, z=-8.4+排*2.8）。
@@ -607,8 +614,10 @@ function buildMonkProcedural(tint) {
 function buildCat() {
   const g = new THREE.Group();
   const toon = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: toonGradient() });
-  const fur = toon(0xe6a858);
-  const furDark = toon(0xb87a34);
+  // 布偶猫配色（对齐撸猫面板与理想参考图）：奶油底色 + 深棕重点色（耳/背/尾）
+  const fur = toon(0xece2d0);
+  const furDark = toon(0x5c4434);
+  const point = toon(0x6b5240);
   const white = toon(0xf9efd9);
   const ink = toon(0x332720);
   const pink = new THREE.MeshBasicMaterial({ color: 0xe89c94, transparent: true, opacity: 0.62, depthWrite: false });
@@ -642,7 +651,7 @@ function buildCat() {
   const ears = [], eyes = [], paws = [], hind = [];
   const earGeo = new THREE.ConeGeometry(0.14, 0.26, 4);
   for (const s of [-1, 1]) {
-    const e = new THREE.Mesh(earGeo, fur);
+    const e = new THREE.Mesh(earGeo, point);
     e.position.set(0.54, 1.0, s * 0.18); e.rotation.z = -0.16; e.rotation.y = Math.PI / 4; g.add(e); ears.push(e);
     const inner = new THREE.Mesh(new THREE.ConeGeometry(0.072, 0.15, 4), pink);
     inner.position.set(0.575, 1.0, s * 0.18); inner.rotation.z = -0.16; inner.rotation.y = Math.PI / 4; g.add(inner);
@@ -2898,4 +2907,6 @@ window.addEventListener('unhandledrejection', (e) => {
 window.addEventListener('error', (e) => {
   if (window.__zenReady && e.message) { window.__zenReady = false; window.__zenError = e.message; }
 });
+
+
 
