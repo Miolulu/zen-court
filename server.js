@@ -30,7 +30,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
-const PORT = 8787;
+const PORT = process.env.PORT || 8787;   // 托管平台会注入 PORT；本地默认 8787
 const ROOT = __dirname;
 const MAX_PLAYERS = 50;   // 单庙在线上限；与前端 10 列 × 5 排 = 50 张拜垫一一对应
 const MIME = {
@@ -195,7 +195,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('[zen-court] 真实多人服务已启动');
   console.log('   浏览器打开： http://localhost:' + PORT);
 });
