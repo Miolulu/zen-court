@@ -44,8 +44,11 @@ export class Monk2D {
     this.tex = new THREE.CanvasTexture(this.canvas);
     this.tex.colorSpace = THREE.SRGBColorSpace;
     this.tex.anisotropy = 4;
-    const mat = new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false });
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.8), mat);
+    // 用 Sprite 替代手动旋转的 PlaneGeometry：永远朝向相机、永不会被面剔除，
+    // 从任意视角都能稳定看到纸片小沙弥及其动作。
+    const mat = new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false });
+    this.mesh = new THREE.Sprite(mat);
+    this.mesh.scale.set(1.2, 1.8, 1);
     this.mesh.position.y = 0.9;
     this.mesh.raycast = () => {};
     this.group = new THREE.Group();
@@ -131,12 +134,7 @@ export class Monk2D {
         else this.action = null;
       }
     }
-    // billboard：仅绕 Y 轴朝向相机
-    if (camera) {
-      const dx = camera.position.x - this.group.position.x;
-      const dz = camera.position.z - this.group.position.z;
-      this.mesh.rotation.y = Math.atan2(dx, dz);
-    }
+    // Sprite 已自动朝向相机，无需手动旋转
     this._draw();
     this.tex.needsUpdate = true;
   }
@@ -267,8 +265,10 @@ export class Cat2D {
     this.ctx = this.canvas.getContext('2d');
     this.tex = new THREE.CanvasTexture(this.canvas);
     this.tex.colorSpace = THREE.SRGBColorSpace; this.tex.anisotropy = 4;
-    const mat = new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false });
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.9), mat);
+    // Sprite：永远朝向相机、永不被剔除
+    const mat = new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false });
+    this.mesh = new THREE.Sprite(mat);
+    this.mesh.scale.set(1.0, 0.9, 1);
     this.mesh.position.y = 0.45; this.mesh.raycast = () => {};
     this.group = new THREE.Group(); this.group.add(this.mesh); this.group.raycast = () => {};
     this.action = 'idle'; this.t = 0; this.time = 0; this.facing = 1;
@@ -276,11 +276,7 @@ export class Cat2D {
   play(a) { this.action = a; this.t = 0; }
   update(dt, camera) {
     this.time += dt; this.t += dt;
-    if (camera) {
-      const dx = camera.position.x - this.group.position.x;
-      const dz = camera.position.z - this.group.position.z;
-      this.mesh.rotation.y = Math.atan2(dx, dz);
-    }
+    // Sprite 已自动朝向相机
     this._draw(); this.tex.needsUpdate = true;
   }
   _draw() {

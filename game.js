@@ -199,8 +199,7 @@ const META = {
   lamp:    { name: '长明灯', verb: '点一盏灯', gain: 3, focus: true },
   incense: { name: '香炉',   verb: '上一炷香', gain: 3, focus: true },
   pet:     { name: '庙里的猫', verb: '撸一撸', gain: 1, focus: true },
-  coin:    { name: '荷池金蟾', verb: '抛一枚硬币', gain: 1, focus: true },
-  sweep:   { name: '落叶堆', verb: '扫一扫', gain: 2 }
+  coin:    { name: '荷池金蟾', verb: '抛一枚硬币', gain: 1, focus: true }
 };
 // 布局对齐 sansatemple「清缘堂」：正中一尊大佛 + 佛后壁画 + 佛前供桌 + 中轴香炉 + 成排拜垫。
 // 原站每排 10 垫、共 10 排 100 席（对应单房 100 人，fr(i): x=(e-5)*2.4/(e-4)*2.4, z=-8.4+排*2.8）。
@@ -433,7 +432,7 @@ let ground, monkObj, catObj, bowPivot, hands, woodfishMesh, beadsMesh, incenseMe
 let monk2dSelf = null, cat2d = null;   // 2.5D 纸片角色（覆盖在 3D 小沙弥 / 寺猫之上）
 let monkRig = null;   // 合十动画骨架（双手家位 + 袖臂静息角），buildMonk 时赋值
 let monkLower = null, monkKnees = null;
-let cushions = [], statues = [], lanternMeshes = [], incenseSmoke = [], leafPiles = [];
+let cushions = [], statues = [], lanternMeshes = [], incenseSmoke = [];
 let petalGeo, petalPoints, hearts = [], heartTex = null, smokeTex = null, petalCount = 150;
 let interactables = [], hoverRing = null, hovered = null, pending = null;
 let activeCushion = null;
@@ -451,8 +450,6 @@ const target = new THREE.Vector3(0, 0, 2.4);
 let monkPose = 'idle', monkPoseT = 0;
 // 猫窝放在拜垫阵列外的左前方树下，猫自己会溜进殿前、蹲蒲团、蹭人
 const catBase = new THREE.Vector3(-8.2, 0, 8.9), catTarget = catBase.clone();
-// 庭院落叶堆：银杏落叶聚成小堆，走近扫一扫会散开，过一会儿又在别处落出一堆
-const LEAF_SPOTS = [[-12.6, 3.2], [12.9, 3.0], [-6.6, 9.6], [7.4, 9.9], [-13.6, 6.4], [13.4, 7.2]];
 let focusMode = false, focusKind = null, focusCount = 0;
 let kneeling = false, kneelT = 0;
 let monkYaw = Math.PI, monkYawTarget = Math.PI;   // 当前朝向 / 目标朝向（弧度）
@@ -1711,29 +1708,7 @@ function buildScene() {
   }
 
   }
-  // ---- 庭院落叶堆：银杏落叶聚成小堆，走近扫一扫会散开，过一会儿又在别处落出一堆 ----
-  const leafMoundMat = new THREE.MeshStandardMaterial({ color: 0xd9a13c, roughness: 0.95 });
-  for (const [px, pz] of LEAF_SPOTS) {
-    if (Math.hypot(px - POND.x, pz - POND.z) < POND.r + 1.2) continue;   // 不落进荷池里
-    const g = new THREE.Group();
-    const mound = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 8), leafMoundMat);
-    mound.scale.set(1, 0.38, 1); mound.position.y = 0.08; mound.castShadow = true; g.add(mound);
-    for (let k = 0; k < 6; k++) {
-      const lf = new THREE.Mesh(new THREE.CircleGeometry(0.09, 6),
-        new THREE.MeshStandardMaterial({ color: k % 2 ? 0xe0b254 : 0xc98f30, roughness: 0.95, side: THREE.DoubleSide }));
-      lf.rotation.set(-Math.PI / 2 + (Math.random() - 0.5) * 0.5, Math.random() * 6.28, 0);
-      const a = Math.random() * 6.28, r = 0.55 + Math.random() * 0.45;
-      lf.position.set(Math.cos(a) * r, 0.02, Math.sin(a) * r);
-      lf.userData.leaf = true; g.add(lf);
-    }
-    g.position.set(px, 0, pz);
-    g.userData = {
-      action: 'sweep', label: '落叶堆 · 扫一扫',
-      ringPos: new THREE.Vector3(px, 0.03, pz), spot: new THREE.Vector3(px, 0, pz + 0.9),
-      moundScaleY: 0.38, swept: false, nextAt: 0
-    };
-    scene.add(g); leafPiles.push(g);
-  }
+  // 落叶堆交互已按需求移除（不再有可扫的落叶堆）。
 
   // 木鱼与念珠不再摆在院子边角：改到右下角固定工具坞（见 index.html 的 .dock）
 
@@ -1784,6 +1759,10 @@ function buildScene() {
   cat2d = new Cat2D({ fur: '#E0922F', furShade: '#C9771F' });
   cat2d.group.position.copy(catObj.position); scene.add(cat2d.group);
   catObj.visible = false;
+  // 让「看得见的纸片橘猫」成为可点击对象：重新挂回 Sprite 的射线检测，
+  // 点哪只猫就撸哪只，而不是点一片看不见的旧 3D 猫。
+  cat2d.mesh.raycast = THREE.Sprite.prototype.raycast;
+  cat2d.group.userData = { action: 'pet', dynamic: true, label: '庙里的猫 · 撸一撸' };
   catShadow = softShadow(1.5, 0.28); scene.add(catShadow);
 
   // 悬停提示：地面柔光盘 + 一圈细金环，比原来的硬边圆环柔和
@@ -1819,7 +1798,7 @@ function buildScene() {
     g.position.set(0, 0.06, 0); g.raycast = () => {}; o.add(g);
   }
 
-  interactables = [ground, catObj, incenseMesh, toadObj, ...cushions, ...statues, monkObj, ...lanternMeshes, ...leafPiles].filter(Boolean);
+  interactables = [ground, catObj, cat2d.group, incenseMesh, toadObj, ...cushions, ...statues, monkObj, ...lanternMeshes].filter(Boolean);
 }
 
 // 佛前三盏常明；其余按「今日愿灯」点亮，灯下挂写有法号的愿签，hover 可看完整愿望
@@ -2131,55 +2110,6 @@ function updateCoinFx(dt) {
     }
   }
 }
-// 扫落叶：叶片四散飞开、土堆塌平，稍后在院子另一处重新落出一堆
-function sweepLeafPile(g) {
-  if (!g || !g.userData || g.userData.swept) return;
-  g.userData.swept = true;
-  g.userData.nextAt = time + 20 + Math.random() * 14;
-  g.userData.label = '落叶已扫 · 稍后又会落一堆';
-  for (const m of g.children) {
-    if (!m.userData || !m.userData.leaf) continue;
-    const a = Math.random() * 6.28, r = 0.8 + Math.random() * 1.6;
-    m.userData.fly = { vx: Math.cos(a) * r, vz: Math.sin(a) * r, vy: 1.1 + Math.random(), spin: (Math.random() - 0.5) * 8 };
-  }
-}
-function updateLeafPiles(dt) {
-  for (const g of leafPiles) {
-    const ud = g.userData;
-    if (!ud || !ud.swept) continue;
-    let flying = false;
-    for (const m of g.children) {
-      if (!m.userData || !m.userData.leaf || !m.userData.fly) continue;
-      flying = true;
-      const f = m.userData.fly;
-      m.position.x += f.vx * dt; m.position.z += f.vz * dt;
-      m.position.y += f.vy * dt; f.vy -= dt * 2.6;
-      m.rotation.z += f.spin * dt;
-      if (m.position.y <= 0.02) { m.position.y = 0.02; f.vy = 0; f.vx *= 0.86; f.vz *= 0.86; }
-    }
-    const mound = g.children[0];
-    if (mound) mound.scale.y = Math.max(0.06, mound.scale.y - dt * 0.55);
-    if (!flying && ud.nextAt && time > ud.nextAt) {
-      // 在别处重新落出一堆
-      ud.swept = false; ud.nextAt = 0; ud.label = '落叶堆 · 扫一扫';
-      let s = LEAF_SPOTS[0];
-      for (let tries = 0; tries < 12; tries++) {
-        const c = LEAF_SPOTS[(Math.random() * LEAF_SPOTS.length) | 0];
-        if (Math.hypot(c[0] - g.position.x, c[1] - g.position.z) > 3.5) { s = c; break; }
-      }
-      g.position.set(s[0], 0, s[1]);
-      ud.ringPos.set(s[0], 0.03, s[1]); ud.spot.set(s[0], 0, s[1] + 0.9);
-      if (mound) mound.scale.y = ud.moundScaleY;
-      for (const m of g.children) {
-        if (!m.userData || !m.userData.leaf) continue;
-        m.userData.fly = null;
-        const a = Math.random() * 6.28, r = 0.55 + Math.random() * 0.45;
-        m.position.set(Math.cos(a) * r, 0.02, Math.sin(a) * r);
-        m.rotation.set(-Math.PI / 2 + (Math.random() - 0.5) * 0.5, Math.random() * 6.28, 0);
-      }
-    }
-  }
-}
 function updateMonkIdle() {
   // 小沙弥与同修都不是杵着的：呼吸起伏、偶尔眨眼、轻轻转头
   // 呼吸叠加在跪姿缩放之上，不能把 kneelT 算出来的压低覆盖掉
@@ -2332,7 +2262,6 @@ function doAction(id) {
   else if (id === 'beads') Sound.tick();
   else if (id === 'lamp') Sound.lamp();          // 功德与点亮由服务端的 lampOk 发放
   else if (id === 'pet') CatLife.pet();          // 猫进入被撸状态，不再被瞬移到脚边
-  else if (id === 'sweep') Sound.tick();         // 扫叶：簌的一声轻响
   Net.action(id); persist(); updateHUD();
 }
 function nearestCushion(p) {
@@ -2352,7 +2281,6 @@ function trigger(id, obj) {
     toggleKneel(nearestCushion(obj.userData.spot), true);
     return;
   }
-  if (id === 'sweep') { sweepLeafPile(obj); doAction(id); return; }
   monkPose = id; monkPoseT = 0.8;
   // 世界内动作演出（取代放大面板）：木鱼/念珠/点灯/上香/撸猫 直接在小沙弥身上演，不再弹窗
   if (META[id].focus) (id === 'coin' ? openFocus(id) : worldAction(id, obj));
@@ -2523,7 +2451,12 @@ function worldAction(id, obj) {
     const loop = (a === 'woodfish' || a === 'beads' || a === 'pet');
     monk2dSelf.play(a, { repeat: loop ? 3 : 1, loop });
   }
-  if (id === 'pet' && cat2d) cat2d.play('pet');
+  if (id === 'pet' && cat2d) {
+    cat2d.play('pet');
+    // 撸一会儿后恢复 idle，避免纸片猫一直卡在眯眼打呼的姿势
+    clearTimeout(cat2d._petTimer);
+    cat2d._petTimer = setTimeout(() => { if (cat2d && cat2d.action === 'pet') cat2d.action = 'idle'; }, 2800);
+  }
   doAction(id);   // 功德 / 音效 / 服务端特效（烟火、灯光）照常
 }
 function openFocus(kind) {
@@ -3220,7 +3153,7 @@ function update(dt) {
     }
   }
 
-  updateCatLife(dt); updateFlames(); updateLure(dt); updatePond(dt); updateLeafPiles(dt); updateMonkIdle();
+  updateCatLife(dt); updateFlames(); updateLure(dt); updatePond(dt); updateMonkIdle();
   // 2.5D 纸片角色：跟随 3D 本体坐标并逐帧重绘
   if (monk2dSelf) { monk2dSelf.group.position.set(monkObj.position.x, 0, monkObj.position.z); monk2dSelf.update(dt, camera); }
   if (cat2d) { cat2d.group.position.set(catObj.position.x, 0, catObj.position.z); cat2d.update(dt, camera); }
