@@ -200,8 +200,68 @@ const META = {
   incense: { name: '香炉',   verb: '上一炷香', gain: 3, focus: true },
   pet:     { name: '庙里的猫', verb: '撸一撸', gain: 1, focus: true },
   coin:    { name: '荷池金蟾', verb: '抛一枚硬币', gain: 1, focus: true },
-  sweep:   { name: '落叶堆', verb: '扫一扫', gain: 0 }
+  sweep:   { name: '落叶堆', verb: '扫一扫', gain: 0 },
+  // 批 1B 氛围触点：无计数、无奖励，只有视觉与声音反馈
+  fortune: { name: '签筒',   verb: '求一签', gain: 0 },
+  tree:    { name: '银杏',   verb: '看一眼树', gain: 0 },
+  monk_npc:{ name: '挂单僧', verb: '说说话', gain: 0 },
+  stele:   { name: '碑刻',   verb: '读一读', gain: 0 },
+  wipe:    { name: '拂尘',   verb: '擦一擦', gain: 0 }
 };
+
+// ===================== 批 1B 文案数据 =====================
+// 32 签：签题 + 四句偈 + 白话解。清雅禅意、答案之书式短句；不写吉凶迷信。
+const FORTUNE_SLIPS = [
+  { t: '静坐', v: ['风止于一杯茶', '尘落于旧窗台', '不必赶往何处', '此处即是去处'], n: '眼下的事没有看起来那么急。先坐一会儿，再动身。' },
+  { t: '听钟', v: ['一声钟响过', '万籁皆低头', '你心里的褶皱', '也被抚平一层'], n: '让声音替你说话，此刻不必解释自己。' },
+  { t: '扫地', v: ['扫的是落叶', '净的是心地', '弯下腰那一刻', '天地都开阔'], n: '从最小的一件事做起，混乱自会退开。' },
+  { t: '烹茶', v: ['水沸三分喧', '茶沉七分静', '待客亦待己', '一盏见真心'], n: '慢一点，把过程当作馈赠而不是等待。' },
+  { t: '观云', v: ['云不曾留下', '也不曾离开', '你抬头的时间', '就是它的意义'], n: '有些事无需占有，看过即是拥有。' },
+  { t: '夜雨', v: ['雨打芭蕉夜', '灯挑一点明', '无人来问津', '恰好读旧书'], n: '独处的时光不是被落下的，是被留给你的。' },
+  { t: '山行', v: ['山不语', '石有痕', '每一步都算数', '不必问远近'], n: '进展比你以为的多，继续走就好。' },
+  { t: '候月', v: ['月有它的时辰', '不为谁提前', '你等的不是月', '是自己的晴朗'], n: '时机未到不勉强，先把自己照顾好。' },
+  { t: '放下', v: ['手里握太紧', '石头也成刺', '松开半个指节', '泉水便涌出'], n: '松开一点，紧握之物正堵住你新的可能。' },
+  { t: '回信', v: ['一封信在路上', '迟到也是旅程', '你的耐心', '是它的驿站'], n: '未回复不代表被遗忘，安顿好自己再回头看。' },
+  { t: '烹雪', v: ['雪水三分淡', '炉火七分温', '极简的滋味', '最耐人回味'], n: '少即是多。删掉多余，留下来的才像你。' },
+  { t: '闻香', v: ['炉烟一线起', '不急不徐升', '心事随之散', '散作满室清'], n: '让情绪先过去，再决定说什么。' },
+  { t: '种竹', v: ['竹四年扎根', '第五年冲天', '你看不见处', '万事都在生长'], n: '眼下的沉寂是扎根期，别在第五年前放弃。' },
+  { t: '渡桥', v: ['桥在那头等你', '河水替你数步', '走到一半回头', '来路已成风景'], n: '已经过了最难的阶段，回头看看你走了多远。' },
+  { t: '闭门', v: ['闭门非拒绝', '是给心留座', '门内有清风', '何必叩人门'], n: '先安顿自己。你的答案在你那边，不在别人那里。' },
+  { t: '拂尘', v: ['尘是旧的', '拂帚是新的', '每天擦一遍', '日子就亮一层'], n: '重复的小事里有真正的改变，今天也擦一遍。' },
+  { t: '听泉', v: ['泉不问归处', '石不问来处', '相遇即相鸣', '声声皆自由'], n: '不必为相遇设结局，此刻的共鸣已足够。' },
+  { t: '晒书', v: ['字迹经了日', '书页有了风', '旧知识翻新', '旧心事翻篇'], n: '把旧的摊开来晒一晒，很多结就不解自开。' },
+  { t: '守灯', v: ['灯芯短一寸', '夜就亮一分', '守着微小的事', '就守住了自己'], n: '继续做那件小事，它比你以为的更重要。' },
+  { t: '雪霁', v: ['雪停天未晴', '素白盖纷扰', '万事暂且缓', '且看一眼白'], n: '现在不是做决定的时候，先看，先等，先呼吸。' },
+  { t: '问路', v: ['路人指了指', '又指了指山', '答案不在嘴里', '在你迈的腿上'], n: '别人给不了你答案，但每一步会给。' },
+  { t: '煮粥', v: ['米要慢慢熬', '火要小小守', '急来的都夹生', '熬透的自绵长'], n: '这件事急不得，小火慢熬才有后味。' },
+  { t: '临窗', v: ['窗是一方砚', '天色是墨', '你坐得够久', '就能磨出光'], n: '安静地多待一会儿，思路会自己清晰起来。' },
+  { t: '拾穗', v: ['弯腰拾一穗', '直腰看千顷', '收获不在大小', '在你肯弯腰'], n: '小的机会也值得俯身，大的从小的里长出来。' },
+  { t: '系舟', v: ['舟系岸一宿', '水推它千回', '明晨解缆时', '已是顺流意'], n: '今天允许自己停泊，明天再出发时会更顺。' },
+  { t: '研墨', v: ['墨要研得匀', '心要按得平', '落笔无好坏', '写下即是清'], n: '别急着评判自己，先把它完整做出来。' },
+  { t: '访僧', v: ['问的是路', '得到的是茶', '答案没给全', '心却已经安'], n: '去和人聊聊。你要的未必是答案，是陪伴。' },
+  { t: '秋收', v: ['收多收少', '天已尽力', '你端碗的手', '就是圆满'], n: '结果已足够好，学会为自己的收成点头。' },
+  { t: '画松', v: ['笔笔皆瘦', '节节皆风', '骨相立住了', '叶疏也无妨'], n: '抓住主干，枝叶可以以后再补。' },
+  { t: '扫雪', v: ['雪落了就扫', '扫完又落', '修行没有毕', '只有再一遍'], n: '别指望一劳永逸，再来一遍就是功夫。' },
+  { t: '待客', v: ['茶凉再续', '客走门留', '聚散皆有信', '你只管温茶'], n: '把自己那部分做好，其余交给时间。' },
+  { t: '晚钟', v: ['一日将尽时', '钟声最绵长', '今日已尽力', '好好睡一场'], n: '今天到这里就很好了，休息也是修行的一部分。' }
+];
+// 每日一偈：按本地日期确定性取一签（同一刷新周期内不变）
+function dailySlipIndex() {
+  const s = localDateStr(); let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % FORTUNE_SLIPS.length;
+}
+// 挂单僧：固定立于廊下，点击轮转 5 句
+const MONK_NPC_LINES = [
+  '施主从远方来，一路风尘。殿后有热茶，自取便是。',
+  '小庙没有香火簿，功德不在簿上，在心里。',
+  '落叶扫与不扫，都是修行。扫了干净，留着也是景。',
+  '池里的鱼认得常来的人。你若常来，它们也会认得你。',
+  '老衲挂单于此，只管扫地添水。施主若有什么想问的，风会替我答。'
+];
+// 碑刻预设偈语 + 会话留字（sessionStorage，不落库）
+const STELE_VERSE = ['山静似太古', '日长如小年'];
+const STELE_KEY = CONFIG.SAVE_KEY + ':stele';
 // 布局对齐 sansatemple「清缘堂」：正中一尊大佛 + 佛后壁画 + 佛前供桌 + 中轴香炉 + 成排拜垫。
 // 原站每排 10 垫、共 10 排 100 席（对应单房 100 人，fr(i): x=(e-5)*2.4/(e-4)*2.4, z=-8.4+排*2.8）。
 // 氛围观赏型：6 列 × 3 排 = 18 席，间距拉开、单垫放大，殿前留白让佛堂成为主体。
@@ -434,6 +494,7 @@ let monk2dSelf = null, cat2d = null;   // 2.5D 纸片角色（覆盖在 3D 小�
 let monkRig = null;   // 合十动画骨架（双手家位 + 袖臂静息角），buildMonk 时赋值
 let monkLower = null, monkKnees = null;
 let cushions = [], statues = [], lanternMeshes = [], incenseSmoke = [], leafPiles = [];
+let monkNpc = null, treeRibbons = [], treeObjRef = null;   // 批 1B：挂单僧 / 树上飘带（会话内可见）
 let petalGeo, petalPoints, hearts = [], heartTex = null, smokeTex = null, petalCount = 150;
 let interactables = [], hoverRing = null, hovered = null, pending = null;
 let activeCushion = null;
@@ -1817,13 +1878,85 @@ function buildScene() {
   }));
   scene.add(fireflies);
 
+  // ---- 批 1B 氛围触点物件：签筒 / 拂尘 / 观赏银杏 / 挂单僧 / 碑刻 ----
+  const ambienceMat = () => new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.85 });
+  // 签筒：月台右前沿，竹筒 + 签支 + 木座
+  const fortuneCyl = new THREE.Group();
+  const ftBamboo = new THREE.MeshStandardMaterial({ color: 0xa88a54, roughness: 0.8 });
+  const ftTube = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.52, 14), ftBamboo);
+  ftTube.position.y = 0.78; fortuneCyl.add(ftTube);
+  const ftRim = new THREE.Mesh(new THREE.TorusGeometry(0.225, 0.022, 8, 20), ambienceMat());
+  ftRim.rotation.x = Math.PI / 2; ftRim.position.y = 1.03; fortuneCyl.add(ftRim);
+  for (let i = 0; i < 7; i++) {
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 5), ambienceMat());
+    const a = (i / 7) * Math.PI * 2;
+    st.position.set(Math.cos(a) * 0.1, 0.95 + (i % 3) * 0.03, Math.sin(a) * 0.1);
+    st.rotation.z = Math.cos(a) * 0.16; st.rotation.x = Math.sin(a) * 0.16;
+    fortuneCyl.add(st);
+  }
+  const ftStand = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 0.5, 12), ambienceMat());
+  ftStand.position.y = 0.26; fortuneCyl.add(ftStand);
+  fortuneCyl.position.set(2.6, TERRACE_TOP, -5.6);
+  fortuneCyl.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  fortuneCyl.userData = { action: 'fortune', label: '签筒 · 求一签', spot: new THREE.Vector3(2.6, 0, -4.5) };
+  scene.add(fortuneCyl);
+  // 拂尘：月台左前沿的木架，柄朝外垂一束白丝
+  const wipeObj = new THREE.Group();
+  const wStand = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.9, 10), ambienceMat());
+  wStand.position.y = 0.45; wipeObj.add(wStand);
+  const wArm = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 8), ambienceMat());
+  wArm.rotation.z = Math.PI / 2; wArm.position.set(0.16, 0.92, 0); wipeObj.add(wArm);
+  const wHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.42, 8),
+    new THREE.MeshStandardMaterial({ color: 0x5c4630, roughness: 0.7 }));
+  wHandle.rotation.z = 0.5; wHandle.position.set(0.34, 0.78, 0); wipeObj.add(wHandle);
+  const wHairs = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 8),
+    new THREE.MeshStandardMaterial({ color: 0xe9e2d2, roughness: 1 }));
+  wHairs.rotation.z = 0.5; wHairs.position.set(0.48, 0.62, 0); wipeObj.add(wHairs);
+  wipeObj.position.set(-2.6, TERRACE_TOP, -5.6);
+  wipeObj.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  wipeObj.userData = { action: 'wipe', label: '拂尘 · 擦一擦', spot: new THREE.Vector3(-2.6, 0, -4.5) };
+  scene.add(wipeObj);
+  // 观赏银杏：院落东南角，可系一条飘带（本次会话可见）
+  const treeObj = buildGinkgo(1.05);
+  treeObj.position.set(12.8, 0, 9.2);
+  treeObj.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  treeObj.userData = { action: 'tree', label: '银杏 · 看一眼树', spot: new THREE.Vector3(11.9, 0, 8.4) };
+  treeObjRef = treeObj;
+  scene.add(treeObj);
+  // 挂单僧：固定立于廊下东侧，点击轮转 5 句对话（静止，不巡游）
+  const npcM = buildMonk(ROBE_BLUES[3]);
+  monkNpc = npcM.group;
+  monkNpc.position.set(10.6, 0, -2.6);
+  monkNpc.rotation.y = Math.atan2(-10.6, 2.6);   // 面朝庭院中心
+  monkNpc.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  monkNpc.userData = { action: 'monk_npc', label: '挂单僧 · 说说话', spot: new THREE.Vector3(9.4, 0, -1.8) };
+  scene.add(monkNpc);
+  // 碑刻：院门南侧，石碑 + 帽 + 基座
+  const steleObj = new THREE.Group();
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb3ab9c, roughness: 0.92 });
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.6, 0.2), stoneMat);
+  slab.position.y = 1.15; steleObj.add(slab);
+  const sCap = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.22, 0.34), stoneMat);
+  sCap.position.y = 2.02; steleObj.add(sCap);
+  const sBase = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.36, 0.6), stoneMat);
+  sBase.position.y = 0.18; steleObj.add(sBase);
+  steleObj.position.set(5.4, 0, 10.1);
+  steleObj.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  steleObj.userData = { action: 'stele', label: '碑刻 · 读一读', spot: new THREE.Vector3(5.4, 0, 9.2) };
+  scene.add(steleObj);
+  // 新触点脚下同样一圈极淡暖光
+  for (const o of [fortuneCyl, wipeObj, treeObj, monkNpc, steleObj].filter(Boolean)) {
+    const g = softGlow(1.5, 0xd9c69b, 0.15);
+    g.position.set(0, 0.06, 0); g.raycast = () => {}; o.add(g);
+  }
+
   // 可交互物脚下一圈极淡的暖光，只提示「这里可以点」，跟随物件一起移动
   for (const o of [catObj, incenseMesh, toadObj].filter(Boolean)) {
     const g = softGlow(1.5, 0xd9c69b, 0.15);
     g.position.set(0, 0.06, 0); g.raycast = () => {}; o.add(g);
   }
 
-  interactables = [ground, catObj, cat2d.group, incenseMesh, toadObj, ...cushions, ...statues, monkObj, ...lanternMeshes, ...leafPiles].filter(Boolean);
+  interactables = [ground, catObj, cat2d.group, incenseMesh, toadObj, ...cushions, ...statues, monkObj, ...lanternMeshes, ...leafPiles, fortuneCyl, wipeObj, treeObj, monkNpc, steleObj].filter(Boolean);
 }
 
 // 佛前三盏常明；其余按「今日愿灯」点亮，灯下挂写有法号的愿签，hover 可看完整愿望
@@ -1838,7 +1971,7 @@ function updateLanterns() {
     g.children[1].intensity = on ? 1.1 : 0.0;
     if (g.children[2] && g.children[2].material) g.children[2].material.opacity = on ? 0.5 : 0.06;
     const f = flames.find(x => x.group === g); if (f) f.on = on;
-    g.userData.label = lamp ? ('愿灯 · ' + lamp.name + '：' + lamp.wish) : (myLamp ? '长明灯 · 今日已点一盏' : '长明灯');
+    g.userData.label = lamp ? ('愿灯 · ' + lamp.name + '：' + lamp.wish) : (myLamp ? '愿灯 · 已亮，可再点一盏' : '长明灯 · 点一盏');
     if (lamp) {
       const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: wishTagTexture(lamp.name), transparent: true, depthWrite: false }));
       tag.position.set(g.children[0].position.x, 4.55, -7.02);
@@ -2353,6 +2486,10 @@ function trigger(id, obj) {
     return;
   }
   if (id === 'sweep') { sweepLeafPile(obj); doAction(id); return; }
+  // 批 1B 氛围触点：只开聚焦面板，不让小沙弥做动作、不记功德
+  if (id === 'fortune' || id === 'tree' || id === 'monk_npc' || id === 'stele' || id === 'wipe') {
+    Sound.unlock(); openFocus(id); return;
+  }
   monkPose = id; monkPoseT = 0.8;
   // 世界内动作演出（取代放大面板）：木鱼/念珠/点灯/上香/撸猫 直接在小沙弥身上演，不再弹窗
   if (META[id].focus) (id === 'coin' ? openFocus(id) : worldAction(id, obj));
@@ -2505,6 +2642,53 @@ function renderFocusObj(kind) {
     }
     const hint = document.createElement('div'); hint.className = 'focus-hint'; hint.textContent = '心诚则灵 · 不限次数'; box.appendChild(hint);
     bindCoin();
+  } else if (kind === 'fortune') {
+    const st = document.createElement('div'); st.className = 'fortune-stage'; st.id = 'fortuneStage';
+    st.innerHTML =
+      '<div class="ft-tube" id="ftTube"><i></i><i></i><i></i><span class="ft-tag">签</span></div>' +
+      '<div class="ft-slip" id="ftSlip">' +
+        '<div class="slip-rod top"></div><div class="slip-sheet">' +
+          '<div class="slip-eyebrow" id="ftEyebrow"></div>' +
+          '<div class="slip-title" id="ftTitle"></div>' +
+          '<div class="slip-verse" id="ftVerse"></div>' +
+          '<div class="slip-note" id="ftNote"></div>' +
+        '</div><div class="slip-rod bottom"></div></div>';
+    box.appendChild(st);
+    bindFortune();
+  } else if (kind === 'tree') {
+    const st = document.createElement('div'); st.className = 'tree-stage'; st.id = 'treeStage';
+    st.innerHTML =
+      '<div class="tree-art"><i class="canopy c1"></i><i class="canopy c2"></i><i class="canopy c3"></i>' +
+        '<i class="trunk"></i><i class="ribbon-mark"></i></div>' +
+      '<div class="tree-ribbons" id="treeRibbons"></div>' +
+      '<div class="tree-note" id="treeNote"></div>' +
+      '<div class="tree-tie" id="treeTie">系一条飘带</div>';
+    box.appendChild(st);
+    bindTree();
+  } else if (kind === 'monk_npc') {
+    const st = document.createElement('div'); st.className = 'npc-stage'; st.id = 'npcStage';
+    st.innerHTML =
+      '<div class="npc-fig"><i class="npc-head"></i><i class="npc-body"></i></div>' +
+      '<div class="npc-bubble fade" id="npcBubble"></div>' +
+      '<div class="focus-hint">点一下 · 再听一句</div>';
+    box.appendChild(st);
+    bindMonkNpc();
+  } else if (kind === 'stele') {
+    const st = document.createElement('div'); st.className = 'stele-stage'; st.id = 'steleStage';
+    st.innerHTML =
+      '<div class="stele-art"><i class="s-top"></i><div class="s-face">' +
+        '<div class="s-verse">' + STELE_VERSE.join('<br>') + '</div>' +
+        '<div class="s-line" id="steleLine"></div></div><i class="s-base"></i></div>' +
+      '<input class="stele-input" id="steleInput" maxlength="16" placeholder="留一句话 · 仅本次来访可见" autocomplete="off" inputmode="text" enterkeyhint="done" />';
+    box.appendChild(st);
+    bindStele();
+  } else if (kind === 'wipe') {
+    const st = document.createElement('div'); st.className = 'wipe-stage'; st.id = 'wipeStage';
+    st.innerHTML =
+      '<div class="wipe-canvas" id="wipeCanvas"><div class="wipe-buddha"></div></div>' +
+      '<div class="focus-hint" id="wipeHint">按住拖动 · 拂去尘面</div>';
+    box.appendChild(st);
+    bindWipe();
   }
   applyPropSprites(kind, box);
 }
@@ -2551,6 +2735,11 @@ function openFocus(kind) {
   else if (kind === 'incense') el.focusCount.textContent = '点香筒，取一炷香';
   else if (kind === 'lamp') el.focusCount.textContent = myLamp ? ('愿 · ' + myLamp.wish) : '点一盏灯';
   else if (kind === 'coin') el.focusCount.textContent = '点水面抛一枚硬币';
+  else if (kind === 'fortune') el.focusCount.textContent = '摇一签 · 看今日的答案';
+  else if (kind === 'tree') el.focusCount.textContent = '树在院中 · 你在树下';
+  else if (kind === 'monk_npc') el.focusCount.textContent = '点一下 · 再听一句';
+  else if (kind === 'stele') el.focusCount.textContent = '碑前一偈 · 可留一句';
+  else if (kind === 'wipe') el.focusCount.textContent = '拂尘掸面 · 擦亮佛颜';
   else el.focusCount.textContent = '轻轻顺毛';
   if (kind === 'pet') CatLife.pet();
   Sound.unlock();
@@ -2589,6 +2778,145 @@ function focusTap(dir) {
   setTimeout(() => rip.remove(), 800);
   el.focusCount.textContent = focusKind === 'fish' ? '一声一响 · 心自静' : '一珠一念 · 莫问数';
   save.totalMerit += 1; persist(); updateHUD(); Net.action(focusKind);
+}
+
+// ===================== 批 1B 氛围触点：求签 / 观赏树 / 挂单僧 / 碑刻 / 拂尘 =====================
+// 统一规则：无计数、无功德、不写存档（碑刻留字仅会话级 sessionStorage）；
+// 反馈只有视觉与声音。随机（再求一签）与确定性（每日一偈）并存。
+let fortuneIdx = -1, npcLineIdx = -1, wipeCleaned = 0, wipeDone = false;
+const WIPE_DUST_N = 10;
+
+function renderSlip(i) {
+  const s = FORTUNE_SLIPS[i];
+  const e = { slip: $('ftSlip'), eyebrow: $('ftEyebrow'), title: $('ftTitle'), verse: $('ftVerse'), note: $('ftNote') };
+  if (!e.slip) return;
+  e.eyebrow.textContent = '静照院 · ' + (i + 1) + ' 签';
+  e.title.textContent = s.t;
+  e.verse.innerHTML = s.v.join('<br>');
+  e.note.textContent = s.n;
+  e.slip.classList.remove('reveal'); void e.slip.offsetWidth; e.slip.classList.add('reveal');
+}
+function bindFortune() {
+  const tube = $('ftTube'); if (!tube) return;
+  fortuneIdx = dailySlipIndex();
+  renderSlip(fortuneIdx);   // 进面板先看「今日一偈」（按本地日期确定性取）
+  tube.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    if (tube.classList.contains('shaking')) return;
+    tube.classList.add('shaking'); Sound.tick();
+    el.focusCount.textContent = '摇签中…';
+    setTimeout(() => {
+      tube.classList.remove('shaking');
+      let n = fortuneIdx;
+      while (n === fortuneIdx) n = (Math.random() * FORTUNE_SLIPS.length) | 0;
+      fortuneIdx = n; renderSlip(n); Sound.chime();
+      el.focusCount.textContent = '再求一签 · 无限次';
+    }, 900);
+  });
+}
+function treePhase() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 9) return { cls: 'dawn', note: '晨露未干，叶色最嫩。' };
+  if (h >= 9 && h < 16) return { cls: 'noon', note: '日头正好，叶色最沉。' };
+  if (h >= 16 && h < 19) return { cls: 'dusk', note: '斜阳穿过，满树旧金。' };
+  return { cls: 'night', note: '夜里只剩轮廓，风声替它说话。' };
+}
+function tieTreeRibbon3D() {
+  if (!treeObjRef || treeRibbons.length) return;
+  const mat = new THREE.MeshStandardMaterial({ color: 0x96574c, roughness: 0.9, side: THREE.DoubleSide });
+  const rb = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.46, 0.008), mat);
+  rb.position.set(0.16, 1.55, 0.12); rb.rotation.z = 0.12; rb.rotation.y = 0.4;
+  rb.raycast = () => {}; treeObjRef.add(rb); treeRibbons.push(rb);
+}
+function bindTree() {
+  const st = $('treeStage'); if (!st) return;
+  const ph = treePhase();
+  st.classList.add(ph.cls);
+  const note = $('treeNote'); if (note) note.textContent = ph.note + ' 飘带在本次来访可见。';
+  const tie = $('treeTie');
+  if (tie) tie.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    if (treeRibbons.length) { el.focusCount.textContent = '一棵树一条带，就很好了'; return; }
+    tieTreeRibbon3D();
+    const row = $('treeRibbons');
+    if (row) { const r = document.createElement('i'); r.className = 'ribbon-strip'; row.appendChild(r); }
+    st.classList.add('tied');
+    tie.classList.add('done'); tie.textContent = '已系上 · 风会记得';
+    el.focusCount.textContent = '飘带已系 · 风会记得';
+    Sound.chime();
+  });
+}
+function bindMonkNpc() {
+  const bubble = $('npcBubble'), st = $('npcStage');
+  if (!bubble) return;
+  npcLineIdx = -1;
+  const advance = () => {
+    npcLineIdx = (npcLineIdx + 1) % MONK_NPC_LINES.length;
+    bubble.classList.remove('fade'); void bubble.offsetWidth; bubble.classList.add('fade');
+    bubble.textContent = MONK_NPC_LINES[npcLineIdx];
+    Sound.tick();
+  };
+  advance();
+  if (st) st.addEventListener('pointerdown', (e) => { e.stopPropagation(); advance(); });
+}
+function bindStele() {
+  const input = $('steleInput'), line = $('steleLine');
+  if (!input) return;
+  let saved = null;
+  try { saved = sessionStorage.getItem(STELE_KEY); } catch (e) {}
+  if (saved && line) line.textContent = saved;
+  input.addEventListener('pointerdown', (e) => e.stopPropagation());
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') return;      // 留给 window 收起界面
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const v = (input.value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 16);
+      if (!v || !line) return;
+      line.textContent = v;
+      try { sessionStorage.setItem(STELE_KEY, v); } catch (e2) {}
+      Sound.chime();
+      el.focusCount.textContent = '已留一句 · 仅本次来访可见';
+      input.value = ''; input.blur();
+    }
+  });
+}
+function wipeAt(e, cv) {
+  if (wipeDone) return;
+  const r = cv.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+  cv.querySelectorAll('.dust:not(.clean)').forEach((d) => {
+    const dx = parseFloat(d.style.left) / 100 - px, dy = parseFloat(d.style.top) / 100 - py;
+    if (Math.hypot(dx, dy) < 0.11) { d.classList.add('clean'); wipeCleaned++; Sound.tick(); }
+  });
+  if (wipeCleaned >= WIPE_DUST_N) {
+    wipeDone = true;
+    cv.classList.add('cleaned');
+    Sound.chime();
+    el.focusCount.textContent = '佛面如镜 · 尘不染心';
+    const hint = $('wipeHint'); if (hint) hint.textContent = '擦亮了 · 本次来访保持洁净';
+  }
+}
+function bindWipe() {
+  const cv = $('wipeCanvas'); if (!cv) return;
+  wipeDone = false; wipeCleaned = 0;
+  cv.classList.remove('cleaned');
+  cv.querySelectorAll('.dust').forEach((d) => d.remove());
+  for (let i = 0; i < WIPE_DUST_N; i++) {
+    const d = document.createElement('i'); d.className = 'dust';
+    d.style.left = (12 + Math.random() * 76) + '%';
+    d.style.top = (10 + Math.random() * 74) + '%';
+    cv.appendChild(d);
+  }
+  let pressing = false;
+  cv.addEventListener('pointerdown', (e) => {
+    e.stopPropagation(); pressing = true;
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    wipeAt(e, cv);
+  });
+  cv.addEventListener('pointermove', (e) => { if (pressing) wipeAt(e, cv); });
+  const end = () => { pressing = false; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 }
 
 // 上香：点香筒 → 点烛火 → 点香炉，全程点物件，无按钮
@@ -2763,13 +3091,13 @@ function applyLampState(l) {
   const name = $('lampTagName'), text = $('lampWishText'), hint = $('lampHint');
   if (name) name.textContent = (l.name || '我') + ' 的愿';
   if (text) text.textContent = l.wish;
-  if (hint) hint.textContent = '长明灯已亮 · 明日再来';
+  if (hint) hint.textContent = '愿灯已亮 · 可改写再点一盏';
   el.focusCount.textContent = '愿 · ' + l.wish;
 }
 function bindLamp() {
   const st = $('lampStage'), wick = $('lampWick'), input = $('lampWish');
   if (!st || !wick) return;
-  if (myLamp) { applyLampState(myLamp); return; }
+  if (myLamp && input) input.value = myLamp.wish || '';   // 已有愿灯：预填旧愿，可直接改写再点一盏
   if (input) {
     input.addEventListener('pointerdown', e => e.stopPropagation());
     input.addEventListener('keydown', (e) => {
@@ -2781,7 +3109,7 @@ function bindLamp() {
   wick.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); tryLightLamp(); });
 }
 function tryLightLamp() {
-  if (lampBusy || myLamp) return;
+  if (lampBusy) return;                 // 批 1B：取消「已点过一盏」门禁，可反复改写再点
   const st = $('lampStage'), input = $('lampWish');
   const wish = ((input && input.value) || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 24);
   if (!wish) {
@@ -2807,10 +3135,10 @@ function onLampOk(m, local) {
   lampBusy = false;
   if (lampTimeout) { clearTimeout(lampTimeout); lampTimeout = null; }
   const l = m.lamp; if (!l) return;
-  if (myLamp) { applyLampState(myLamp); return; }   // 本地兜底先到时，服务端回包不重复加功德
+  const first = !myLamp;                        // 批 1B：愿灯可反复放飞，功德只记首次
   myLamp = l; saveLocalLamp(l); addLamp(l);
   Sound.lamp(); Sound.chime();
-  save.totalMerit += META.lamp.gain; persist(); updateHUD();
+  if (first) { save.totalMerit += META.lamp.gain; persist(); updateHUD(); }
   if (!local) Net.action('lamp');
   applyLampState(l);
   showToast(local ? '愿灯已亮（离线记账）' : '愿灯已亮 · ' + l.wish);
@@ -3639,6 +3967,10 @@ async function boot() {
 }
 
 try { boot(); } catch (err) { console.error(err); window.__zenError = String((err && err.message) || err); }
+// 自动化冒烟钩子：仅 ?debug=1 时暴露面板开关，生产环境不挂任何全局入口
+if (new URLSearchParams(location.search).has('debug')) {
+  window.__zenDebug = { openFocus, closeFocus, FORTUNE_SLIPS, MONK_NPC_LINES };
+}
 // 运行期错误也要浮出来：异步加载 / 渲染循环里的异常统一送到启动兜底页显示
 window.addEventListener('unhandledrejection', (e) => {
   if (window.__zenReady) { window.__zenReady = false; window.__zenError = String((e.reason && e.reason.message) || e.reason); }

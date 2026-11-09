@@ -271,11 +271,7 @@ wss.on('connection', (ws) => {
     } else if (d.type === 'lightLamp') {
       const wish = cleanWish(d.wish);
       if (!wish) { ws.send(JSON.stringify({ type: 'lampDeny', reason: 'empty' })); return; }
-      const old = lamps.get(p.name);
-      if (old && old.date === dateStr()) {
-        ws.send(JSON.stringify({ type: 'lampDeny', reason: 'today', lamp: old }));
-        return;
-      }
+      // 批 1B：取消每日一盏校验，愿灯可反复放飞；重写心愿即替换当前这盏（同 name 单盏，跨天自动清）
       const lamp = { name: p.name, wish, date: dateStr(), litAt: Date.now() };
       lamps.set(p.name, lamp);
       ws.send(JSON.stringify({ type: 'lampOk', lamp }));
