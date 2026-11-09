@@ -43,13 +43,17 @@ const GradeShader = {
 
 
 // ===================== Blender GLB 资产（tools/gen_blender_models.py 生成） =====================
-// monk / cushion / toad 由 Blender 建模导出；加载失败自动回退到程序化建模。
+// monk / cushion / toad / buddha / court 由 Blender 建模导出；加载失败自动回退到程序化建模。
+// court.glb = 全场景静态环境（tools/gen_court.py），只含建筑/铺装/树/石灯/池沿，不含任何交互热点。
 // GLB 材质按语义命名（robe/skin/cloth/gold...），载入后替换为游戏的 toon / 贴图材质，风格保持统一。
 const GLB_CACHE = {};
 function preloadGLB() {
   let loader;
   try { loader = new GLTFLoader(); } catch (e) { return Promise.resolve(); }
-  const jobs = ['monk', 'cushion', 'toad', 'buddha'].map((n) =>
+  // ?nocourt=1 强制走旧的程序化占位几何，用于 A/B 对比与一键回退
+  const glbNames = ['monk', 'cushion', 'toad', 'buddha'];
+  if (!location.search.includes('nocourt')) glbNames.push('court');
+  const jobs = glbNames.map((n) =>
     loader.loadAsync('assets/models/' + n + '.glb')
       .then((g) => { GLB_CACHE[n] = g.scene; })
       .catch(() => {}));
@@ -1165,6 +1169,72 @@ function buildIncenseBurner() {
   return g;
 }
 
+
+// ===================== 全场景静态环境 court.glb（Blender 精建） =====================
+// tools/gen_court.py 生成：举折起翘屋面 / 筒瓦瓦垄瓦当 / 斗拱 / 车削柱 / 棂条格扇 /
+// 须弥座台基 / 望柱栏板 / 石板铺装与御道 / 分叉松树银杏 / 六角石灯 / 荷池石沿。
+// 材质按语义名（court*）导出，这里统一接到清雅水墨色板，风格与 4 个角色 GLB 一致。
+const COURT_PALETTE = {
+  courtStone: 0xC6C1B3, courtStoneDark: 0xB7B2A5, courtStoneLight: 0xCEC9BB,
+  courtMoss: 0xA9AE9B, courtPlaster: 0xBEAE98,
+  courtWood: 0x96574C, courtWoodDark: 0x6B443C, courtWoodLight: 0xAE7D6C,
+  courtTile: 0x3C4541, courtTileLight: 0x51605A,
+  courtGold: 0xB49A68, courtGoldDark: 0x8C7448,
+  courtPine: 0x4A5C4E, courtPineLight: 0x66795F, courtPineDark: 0x39483D,
+  courtTrunk: 0x5A4638, courtGinkgo: 0xB49A68, courtGinkgoLt: 0xC9B27E
+};
+function applyCourtMaterials(root) {
+  const bump = makeBumpTexture(); bump.repeat.set(9, 9);
+  const cache = {};
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const src = Array.isArray(o.material) ? o.material[0] : o.material;
+    const name = (src && src.name) || '';
+    if (name.indexOf('court') !== 0) return;
+    if (!cache[name]) {
+      const isTile = name.indexOf('courtTile') === 0;
+      cache[name] = new THREE.MeshStandardMaterial({
+        color: COURT_PALETTE[name] || 0xc7c1b0,
+        roughness: name.indexOf('courtGold') === 0 ? 0.58 : 0.9,
+        metalness: name.indexOf('courtGold') === 0 ? 0.28 : 0,
+        bumpMap: bump, bumpScale: 0.012,
+        side: isTile ? THREE.DoubleSide : THREE.FrontSide
+      });
+    }
+    o.material = cache[name];
+    // 只让大轮廓投影：瓦垄/瓦当/棂条/椽子/脊饰这些细节在 1024 阴影贴图里
+    // 本来就看不见，却会让阴影 pass 从 ~20k 面涨到 62k 面，手机端是实打实的负担。
+    const detail = /^(paving|roof_tiles|roof_wadang|roof_ridge|roof_chiwen|roof_gable|halo|altar_trim|columns_trim|platform_trim|platform_step|platform_edge|balustrade|plaque|lantern|lattice|rafters)/.test(o.name);
+    o.castShadow = !detail;
+    o.receiveShadow = true;
+    o.raycast = () => {};   // 静态环境不参与拾取，点击穿透到 ground（行走照常）
+  });
+}
+function mountCourt() {
+  const c = GLB_CACHE.court.clone(true);
+  c.name = 'courtEnvironment';
+  applyCourtMaterials(c);
+  scene.add(c);
+
+  // 匾额文字与佛后壁画是代码生成的贴图层，必须叠在 GLB 木框/后墙之前
+  const bigPlaque = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 1.5),
+    new THREE.MeshBasicMaterial({ map: plaqueTexture('静 照 院'), transparent: true, toneMapped: false }));
+  bigPlaque.position.set(0, 6.5, -7.59); bigPlaque.raycast = () => {}; scene.add(bigPlaque);
+  const mural = new THREE.Mesh(new THREE.PlaneGeometry(13.2, 6.6),
+    new THREE.MeshBasicMaterial({ map: Tex.flat('mural.jpg'), fog: false }));
+  mural.position.set(0, 3.72, -13.9); mural.raycast = () => {}; scene.add(mural);
+
+  // 石灯笼的火袋在 GLB 里是镂空六角角柱，暖光由这里补回
+  for (const sx of [-9.6, 9.6]) {
+    const fire = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.30, 0.46, 6),
+      new THREE.MeshStandardMaterial({ color: 0xe8d9ae, emissive: 0xffb45e, emissiveIntensity: 0.72, roughness: 0.8 }));
+    fire.position.set(sx, 1.52, -2.6); fire.raycast = () => {}; scene.add(fire);
+    const lg = softGlow(2.0, 0xffc078, 0.22);
+    lg.position.set(sx, 1.55, -2.6); lg.raycast = () => {}; scene.add(lg);
+  }
+  return c;
+}
+
 function buildScene() {
   flames = []; pondRings = []; wishTags = [];
   scene = new THREE.Scene();
@@ -1181,7 +1251,8 @@ function buildScene() {
   scene.add(new THREE.HemisphereLight(0xf3ebd8, 0x6c7269, 0.74));   // 略降平光，留出明暗层次
   const sun = new THREE.DirectionalLight(0xffe4ba, 1.85);           // 晨光斜射，长柔影
   sun.position.set(19, 17, 12); sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  const lowShadow = matchMedia('(hover: none)').matches || innerWidth < 700;
+  sun.shadow.mapSize.set(lowShadow ? 512 : 1024, lowShadow ? 512 : 1024);
   const sc = sun.shadow.camera;
   sc.left = -38; sc.right = 38; sc.top = 38; sc.bottom = -38; sc.near = 1; sc.far = 110;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.025; sun.shadow.radius = 2.5;
@@ -1197,6 +1268,10 @@ function buildScene() {
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
   ground.userData.action = 'walk'; scene.add(ground);
 
+  // 静态环境优先用 Blender 精建的 court.glb；加载失败自动回退到下面的程序化占位几何
+  const useCourt = !!GLB_CACHE.court;
+  const stone = new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 6, 2), roughness: 0.95 });
+  if (!useCourt) {
   // 拜垫区铺一层略深的石板，把「殿前礼佛空间」从大庭院里分出来
   const courtBump = makeBumpTexture(); courtBump.repeat.set(5, 3);
   const court = new THREE.Mesh(new THREE.PlaneGeometry(26, 13),
@@ -1205,7 +1280,6 @@ function buildScene() {
   court.receiveShadow = true; court.raycast = () => {}; scene.add(court);
 
   // ---- 大殿主体：台基 / 月台 / 墙体 / 红柱 / 格扇 / 歇山飞檐 / 匾额 ----
-  const stone = new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 6, 2), roughness: 0.95 });
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x8b6a5e, roughness: 0.92 });
   const pillarMat = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 3), color: 0xa3665a, roughness: 0.82 });
   const tileMat = new THREE.MeshStandardMaterial({ map: Tex.tile('tile.png', 10, 2), roughness: 0.82 });
@@ -1345,6 +1419,10 @@ function buildScene() {
     scene.add(t);
   }
 
+  } else {
+    mountCourt();
+  }
+
   // ---- 正中一尊大佛 + 佛前成排拜垫 ----
   cushions = []; statues = [];
   // 大佛：殿内正中、坐在须弥台上，面向院子（+z）
@@ -1445,8 +1523,10 @@ function buildScene() {
   }
 
   // ---- 荷池（移到院东，彻底让开拜垫阵列）：石沿 / 水面 / 荷叶 / 涟漪 / 锦鲤 + 金蟾 ----
+  if (!useCourt) {
   const pondRim = new THREE.Mesh(new THREE.TorusGeometry(POND.r + 0.04, 0.19, 8, 40), stone);
   pondRim.rotation.x = -Math.PI / 2; pondRim.position.set(POND.x, 0.07, POND.z); scene.add(pondRim);
+  }
   const pondBed = new THREE.Mesh(new THREE.CircleGeometry(POND.r + 0.06, 40),
     new THREE.MeshStandardMaterial({ color: 0x4a5f58, roughness: 1 }));
   pondBed.rotation.x = -Math.PI / 2; pondBed.position.set(POND.x, 0.012, POND.z); scene.add(pondBed);
@@ -1488,6 +1568,7 @@ function buildScene() {
   scene.add(toad.group); toadObj = toad.group; toadParts = toad.parts;
 
   // ---- 两座石灯笼：让到拜垫阵列之外，立在庭院东西两侧 ----
+  if (!useCourt) {
   const stoneLampMat = new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 1, 1), roughness: 0.95 });
   for (const sx of [-9.6, 9.6]) {
     const sl = new THREE.Group();
@@ -1511,6 +1592,7 @@ function buildScene() {
     scene.add(sl);
   }
 
+  }
   // ---- 庭院落叶堆：银杏落叶聚成小堆，走近扫一扫会散开，过一会儿又在别处落出一堆 ----
   const leafMoundMat = new THREE.MeshStandardMaterial({ color: 0xd9a13c, roughness: 0.95 });
   for (const [px, pz] of LEAF_SPOTS) {
@@ -2693,18 +2775,30 @@ function updateCamera(dt) {
 function updateLabels() {
   if (!el.labels) return;
   const W = el.labels.clientWidth, H = el.labels.clientHeight;
+  // 法号牌避让：几位同修站得近时，把重叠的牌子依次向上错开，不再叠成一团
+  const placed = [];
+  const put = (label, v) => {
+    if (v.z >= 1) { label.style.display = 'none'; return; }
+    const x = (v.x * 0.5 + 0.5) * W;
+    const y = (-v.y * 0.5 + 0.5) * H;
+    let dy = 0;
+    for (let guard = 0; guard < 8; guard++) {
+      const hit = placed.some(p => Math.abs(p.x - x) < 76 && Math.abs(p.y - (y + dy)) < 25);
+      if (!hit) break;
+      dy -= 26;
+    }
+    placed.push({ x, y: y + dy });
+    label.style.display = 'block';
+    label.style.left = x + 'px';
+    label.style.top = (y + dy) + 'px';
+  };
   if (selfLabel && monkObj && myName) {
     const v = monkObj.position.clone(); v.y += 2.52 - (kneeling ? 0.34 : 0); v.project(camera);
-    if (v.z < 1) {
-      selfLabel.style.display = 'block';
-      selfLabel.style.left = ((v.x * 0.5 + 0.5) * W) + 'px';
-      selfLabel.style.top = ((-v.y * 0.5 + 0.5) * H) + 'px';
-    } else selfLabel.style.display = 'none';
+    put(selfLabel, v);
   }
   for (const id in peers) {
     const p = peers[id]; const v = p.group.position.clone(); v.y += 2.4; v.project(camera);
-    if (v.z < 1) { p.label.style.display = 'block'; p.label.style.left = ((v.x * 0.5 + 0.5) * W) + 'px'; p.label.style.top = ((-v.y * 0.5 + 0.5) * H) + 'px'; }
-    else p.label.style.display = 'none';
+    put(p.label, v);
   }
 }
 

@@ -130,3 +130,11 @@ AI 生成原图保留在 `assets/art/backdrop.png` / `buddha.png`，运行时用
 - 六个放大交互面板（木鱼 / 念珠 / 长明灯 / 上香 / 撸猫 / 抛币）不使用 CSS 拟物绘制，而是复用 `buildCat()` / `buildToad()` / `buildIncenseBurner()` 等建模函数，用主 renderer 的 `WebGLRenderTarget` 离屏渲染成透明 PNG（见 `renderPropSprite()`）；生成失败会自动回退到原 CSS 画法，不影响交互。
 - 手机端：竖屏 / 横屏断点在 `index.html`，竖屏专用相机与触摸命中容差在 `game.js`，出生点分槽在 `server.js`。
 
+## 场景建模 v3（全场景 Blender 重建）
+
+- 建模源脚本全部随仓库：`blender/gen_court.py`（整座静态环境）、`blender/gen_blender_models.py`（小沙弥 / 蒲团 / 金蟾 / 坐佛）。两者路径自适应，在会话根 `tools/` 或仓库 `blender/` 下都能跑。
+- 重建：`../tools/blender/blender-4.2.14-windows-x64/blender.exe --background --python blender/gen_court.py`（迭代时可设 `COURT_NO_PREVIEW=1` 跳过 EEVEE 预览）。输出 `assets/models/court.glb`。
+- 只重建**静态环境**；拜垫、香炉、长明灯、猫、金蟾、大佛、水面等交互对象由 `game.js` 保持原坐标，`court.glb` 的 mesh 全部禁用 raycast，点击穿透到地面。
+- 材质按 `court*` 语义名导出，`applyCourtMaterials()` 接清雅水墨色板；色彩需同时改 Blender 里的 `build_materials()` 与 `game.js` 的 `COURT_PALETTE`。
+- `?nocourt=1` 强制走旧的程序化占位几何，用于 A/B 对比与快速回退。
+
