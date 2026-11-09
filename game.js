@@ -949,21 +949,33 @@ function buildStatue(def) {
   statueHalo = softGlow(6.6, 0xffdca2, 0.18);
   statueHalo.position.set(0, 3.75, -0.8); statueHalo.renderOrder = 1; g.add(statueHalo);
 
-  // 立体坐佛（Blender 建模 buddha.glb）：结跏趺坐 + 螺髻 + 禅定印，坐在金边莲台上；
-  // GLB 加载失败时回退到原水彩立绘平面版
+  // v3：殿内主佛改用 AI 水墨佛立绘（与纸片/水墨风格同族，解决「发光肉团」），
+  // GLB 与 webp 依次兜底；?oldbuddha=1 可回退 3D 版
+  let bd3d = null, iconFlat = null;
   if (GLB_CACHE.buddha) {
     const bd = GLB_CACHE.buddha.clone(true);
     applyGameMaterials(bd);
     bd.scale.setScalar(2.08);   // 主尊略增存在感，佛龛木框 6.4 高仍框得住
     bd.position.set(0, 1.02, -0.2);
     g.add(bd);
+    bd3d = bd;
   } else {
-    const icon = new THREE.Mesh(new THREE.PlaneGeometry(4.25, 6.38),
+    iconFlat = new THREE.Mesh(new THREE.PlaneGeometry(4.25, 6.38),
       new THREE.MeshBasicMaterial({
         map: Tex.flat('buddha.webp'), transparent: true, alphaTest: 0.02,
         depthWrite: false, side: THREE.DoubleSide, toneMapped: false
       }));
-    icon.position.set(0, 3.62, -0.3); icon.renderOrder = 3; g.add(icon);
+    iconFlat.position.set(0, 3.62, -0.3); iconFlat.renderOrder = 3; g.add(iconFlat);
+  }
+  if (!new URLSearchParams(location.search).has('oldbuddha')) {
+    new THREE.TextureLoader().load('assets/sprites/buddha_painting.png', (t) => {
+      t.colorSpace = THREE.SRGBColorSpace;
+      const pm = new THREE.Mesh(new THREE.PlaneGeometry(4.32, 5.43),
+        new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.02, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+      pm.position.set(0, 3.52, -0.3); pm.renderOrder = 3; g.add(pm);
+      if (bd3d) bd3d.visible = false;         // 立绘就位后隐掉 3D 佛（加载失败保持 3D）
+      if (iconFlat) iconFlat.visible = false;
+    }, undefined, () => {});
   }
 
   // 佛龛木框：两根立柱 + 额枋 + 底座，中轴留空让立绘完整露出
@@ -2658,8 +2670,7 @@ function renderFocusObj(kind) {
   } else if (kind === 'tree') {
     const st = document.createElement('div'); st.className = 'tree-stage'; st.id = 'treeStage';
     st.innerHTML =
-      '<div class="tree-art"><i class="canopy c1"></i><i class="canopy c2"></i><i class="canopy c3"></i>' +
-        '<i class="trunk"></i><i class="ribbon-mark"></i></div>' +
+      '<div class="tree-art"><img class="tree-img" src="assets/sprites/tree_panel.png" alt="" draggable="false"><i class="ribbon-mark"></i></div>' +
       '<div class="tree-ribbons" id="treeRibbons"></div>' +
       '<div class="tree-note" id="treeNote"></div>' +
       '<div class="tree-tie" id="treeTie">系一条飘带</div>';
@@ -2668,7 +2679,7 @@ function renderFocusObj(kind) {
   } else if (kind === 'monk_npc') {
     const st = document.createElement('div'); st.className = 'npc-stage'; st.id = 'npcStage';
     st.innerHTML =
-      '<div class="npc-fig"><i class="npc-head"></i><i class="npc-body"></i></div>' +
+      '<div class="npc-fig"><img class="npc-img" src="assets/sprites/npc_elder.png" alt="" draggable="false"></div>' +
       '<div class="npc-bubble fade" id="npcBubble"></div>' +
       '<div class="focus-hint">点一下 · 再听一句</div>';
     box.appendChild(st);
@@ -2685,7 +2696,7 @@ function renderFocusObj(kind) {
   } else if (kind === 'wipe') {
     const st = document.createElement('div'); st.className = 'wipe-stage'; st.id = 'wipeStage';
     st.innerHTML =
-      '<div class="wipe-canvas" id="wipeCanvas"><div class="wipe-buddha"></div></div>' +
+      '<div class="wipe-canvas" id="wipeCanvas"><img class="wipe-img" src="assets/sprites/buddha_painting.png" alt="" draggable="false"></div>' +
       '<div class="focus-hint" id="wipeHint">按住拖动 · 拂去尘面</div>';
     box.appendChild(st);
     bindWipe();
@@ -3813,7 +3824,13 @@ async function boot() {
   }
   await preloadGLB();   // Blender 建模资产（失败自动回退程序化建模）
   initThree(); buildScene(); initPost(); updateLanterns(); updateHUD();
-  setTimeout(buildPropSprites, 500);   // 生成 6 个放大面板的同源 3D 渲染图
+  setTimeout(() => {
+    buildPropSprites().then(() => {
+      // AI 立绘覆写：撸猫/投币面板改用生成的水墨图，替换 3D 渲染图（加载失败保持 3D 图）
+      PROP_SPRITES.cat = 'assets/sprites/cat_sit.png';
+      PROP_SPRITES.toad = 'assets/sprites/toad_panel.png';
+    });
+  }, 500);   // 生成 6 个放大面板的同源 3D 渲染图
   Sound.loadSamples();   // 预载写实木鱼 / 念珠 / 点灯采样，首次手势后即可播放
   // 淡入：先让 3D 画面露出来，再收掉遮罩
   requestAnimationFrame(() => setTimeout(() => { if (el.veil) el.veil.classList.add('gone'); }, 180));
