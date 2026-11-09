@@ -3,3 +3,5 @@ tools/
 _versions/
 *.log
 .DS_Store
+__pycache__/
+*.pyc
