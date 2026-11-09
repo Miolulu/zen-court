@@ -134,8 +134,12 @@ wss.on('connection', (ws) => {
   const id = nextId++;
   ws._pid = id;
   // 从庭院中轴入院（拜垫阵列的中央过道，避开居中荷池），再自行找拜垫
-  const x = clamp((Math.random() * 2 - 1) * 1.0, -BX, BX);
-  const z = clamp(2.0 + Math.random() * 1.0, -BZ, BZ);
+  // 按当前人数分槽入院：并发进庙的人不再叠在中轴同一点、法号牌也不会互相压住
+  const slot = peers.size % 12;
+  const lane = Math.floor(slot / 4) - 1;
+  const step = (slot % 4) - 1.5;
+  const x = clamp(lane * 2.6 + step * 0.35, -BX, BX);
+  const z = clamp(2.0 + (slot % 3) * 0.9, -BZ, BZ);
   let joined = false;
 
   // 等客户端 hello（沿用旧法号）；400ms 没来就按全新访客处理，兼容不发 hello 的简易客户端

@@ -42,7 +42,7 @@ const GLB_MATS = {
   goldtrim: () => new THREE.MeshStandardMaterial({ color: 0xb9965a, roughness: 0.5, metalness: 0.4 }),
   hi: () => new THREE.MeshBasicMaterial({ color: 0xffffff }),
   blush: () => new THREE.MeshBasicMaterial({ color: 0xe99a92, transparent: true, opacity: 0.6, depthWrite: false }),
-  band: () => new THREE.MeshStandardMaterial({ color: 0xc2ab7c, roughness: 0.85 }),
+  band: () => new THREE.MeshStandardMaterial({ color: 0xb1a17d, roughness: 0.85 }),
   stitch: () => new THREE.MeshStandardMaterial({ color: 0xa89468, roughness: 0.9 }),
   gold: () => new THREE.MeshStandardMaterial({ color: 0xd8a94c, roughness: 0.36, metalness: 0.62 }),
   goldDark: () => new THREE.MeshStandardMaterial({ color: 0xa87c30, roughness: 0.44, metalness: 0.55 }),
@@ -941,10 +941,10 @@ function buildToadProcedural() {
 // 松树：弯曲主干 + 真实分枝 + 一撮撮扁平松针团（不是圆锥堆成的圣诞树）
 function buildPine(scale) {
   const g = new THREE.Group();
-  const bark = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 3), color: 0x8b6a4a, roughness: 1, flatShading: true });
-  const leafA = new THREE.MeshStandardMaterial({ color: 0x466a55, roughness: 1, flatShading: true });
-  const leafB = new THREE.MeshStandardMaterial({ color: 0x5c8065, roughness: 1, flatShading: true });
-  const padGeo = new THREE.SphereGeometry(0.6, 9, 7);
+  const bark = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 3), color: 0x766450, roughness: 1, flatShading: true });
+  const leafA = new THREE.MeshStandardMaterial({ color: 0x536b5c, roughness: 1, flatShading: true });
+  const leafB = new THREE.MeshStandardMaterial({ color: 0x6b8070, roughness: 1, flatShading: true });
+  const padGeo = new THREE.IcosahedronGeometry(0.6, 0);   // 棱面块叶：写意松针团，不再是圆滚滚的西兰花
 
   // 主干分三段，每段带一点侧倾，读起来是一棵长歪了的松
   let y = 0, leanX = 0, leanZ = 0;
@@ -961,11 +961,10 @@ function buildPine(scale) {
 
   // 枝层：越往上越小；每层绕轴错开，避免对称感
   const levels = [
-    { y: 1.55, r: 1.5, n: 6, s: 1.0 },
-    { y: 2.45, r: 1.24, n: 5, s: 0.86 },
-    { y: 3.25, r: 0.95, n: 5, s: 0.7 },
-    { y: 3.9, r: 0.62, n: 4, s: 0.54 },
-    { y: 4.4, r: 0.3, n: 3, s: 0.4 }
+    { y: 1.7, r: 1.62, n: 5, s: 1.05 },
+    { y: 2.65, r: 1.32, n: 4, s: 0.88 },
+    { y: 3.5, r: 0.98, n: 4, s: 0.7 },
+    { y: 4.25, r: 0.6, n: 3, s: 0.5 }
   ];
   levels.forEach((lv, li) => {
     const phase = li * 1.15;
@@ -982,14 +981,14 @@ function buildPine(scale) {
       g.add(limb);
       const pad = new THREE.Mesh(padGeo, i % 2 ? leafB : leafA);
       pad.position.set(cx, cy, cz);
-      pad.scale.set(lv.s * (1.05 + (i % 2) * 0.12), lv.s * 0.46, lv.s * (0.95 + (i % 3) * 0.08));
+      pad.scale.set(lv.s * (1.18 + (i % 2) * 0.12), lv.s * 0.34, lv.s * (1.06 + (i % 3) * 0.08));
       pad.rotation.y = a * 1.7;
       pad.castShadow = true; g.add(pad);
     }
   });
   // 树尖
   const tip = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 7), leafB);
-  tip.position.set(leanX * 0.8, 4.72, leanZ * 0.8); tip.scale.set(1, 0.72, 1); g.add(tip);
+  tip.position.set(leanX * 0.8, 4.55, leanZ * 0.8); tip.scale.set(1, 0.6, 1); g.add(tip);
 
   g.scale.setScalar(scale || 1);
   g.traverse(o => { if (o.isMesh) { o.raycast = () => {}; o.castShadow = true; } });
@@ -998,10 +997,10 @@ function buildPine(scale) {
 // 银杏：主干 + 三枝 + 扇形暖黄树冠
 function buildGinkgo(scale) {
   const g = new THREE.Group();
-  const bark = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 3), color: 0x7d5f45, roughness: 1, flatShading: true });
-  const gold = new THREE.MeshStandardMaterial({ color: 0xd8b45e, roughness: 1, flatShading: true });
-  const goldLt = new THREE.MeshStandardMaterial({ color: 0xe7c877, roughness: 1, flatShading: true });
-  const green = new THREE.MeshStandardMaterial({ color: 0x8b9c63, roughness: 1, flatShading: true });
+  const bark = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 3), color: 0x6d5c4a, roughness: 1, flatShading: true });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xb9a26e, roughness: 1, flatShading: true });
+  const goldLt = new THREE.MeshStandardMaterial({ color: 0xcbb885, roughness: 1, flatShading: true });
+  const green = new THREE.MeshStandardMaterial({ color: 0x879072, roughness: 1, flatShading: true });
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.38, 3.0, 9), bark);
   trunk.position.y = 1.5; trunk.rotation.z = 0.045; g.add(trunk);
   const branchGeo = new THREE.CylinderGeometry(0.07, 0.16, 1.5, 6);
@@ -1017,7 +1016,7 @@ function buildGinkgo(scale) {
     limb.rotation.z = Math.atan2(cx, 2.0) * -1;
     limb.rotation.x = Math.atan2(cz, 2.0);
     g.add(limb);
-    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.62, 8, 7), mat);
+    const pad = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 0), mat);
     pad.position.set(cx, cy, cz); pad.scale.set(s, s * 0.66, s * 0.92);
     pad.castShadow = true; g.add(pad);
   }
@@ -1122,42 +1121,42 @@ function buildIncenseBurner() {
 function buildScene() {
   flames = []; pondRings = []; wishTags = [];
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xa9b3ab);
-  scene.fog = new THREE.Fog(0xbdb9a6, 42, 120);
+  scene.background = new THREE.Color(0xc2c6b8);
+  scene.fog = new THREE.Fog(0xc9c8b8, 30, 100);
 
   // 远山雾景原画：衬在寺院背后，不吃雾、不吃色调映射，像一张画
   const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(180, 110),
     new THREE.MeshBasicMaterial({ map: Tex.flat('backdrop.jpg'), fog: false, depthWrite: false, toneMapped: false }));
-  backdrop.position.set(0, 22, -72); backdrop.renderOrder = -10; scene.add(backdrop);
+  backdrop.position.set(0, 16, -72); backdrop.renderOrder = -10; scene.add(backdrop);
 
   // 光：右上方暖金斜阳 + 冷色天光补面 + 佛前一点暖光；主光投柔和阴影
-  scene.add(new THREE.HemisphereLight(0xfff0d8, 0x66705e, 1.3));
-  const sun = new THREE.DirectionalLight(0xffdca8, 1.9);
+  scene.add(new THREE.HemisphereLight(0xf3ebd8, 0x6c7269, 0.85));
+  const sun = new THREE.DirectionalLight(0xf7e3c2, 1.45);
   sun.position.set(16, 24, 14); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(1024, 1024);
   const sc = sun.shadow.camera;
   sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.near = 1; sc.far = 90;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.025;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xa9c2cc, 0.5); fill.position.set(-14, 10, 8); scene.add(fill);
-  const altarLight = new THREE.PointLight(0xffce8c, 1.4, 20, 2);
+  const fill = new THREE.DirectionalLight(0xaabbb8, 0.32); fill.position.set(-14, 10, 8); scene.add(fill);
+  const altarLight = new THREE.PointLight(0xf4d6a2, 1.9, 20, 2);
   altarLight.position.set(0, 4.0, -10.6); scene.add(altarLight);
 
   ground = new THREE.Mesh(new THREE.PlaneGeometry(90, 90),
-    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 24, 24), roughness: 0.97 }));
+    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 12, 12), roughness: 0.97 }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
   ground.userData.action = 'walk'; scene.add(ground);
 
   // 拜垫区铺一层略深的石板，把「殿前礼佛空间」从大庭院里分出来
   const court = new THREE.Mesh(new THREE.PlaneGeometry(26, 13),
-    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 8, 4), color: 0xb9b3a4, roughness: 0.97 }));
+    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 5, 3), color: 0xc7c1b0, roughness: 0.97 }));
   court.rotation.x = -Math.PI / 2; court.position.set(0, 0.012, -2.0);
   court.receiveShadow = true; court.raycast = () => {}; scene.add(court);
 
   // ---- 大殿主体：台基 / 月台 / 墙体 / 红柱 / 格扇 / 歇山飞檐 / 匾额 ----
   const stone = new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 6, 2), roughness: 0.95 });
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x9b5b48, roughness: 0.92 });
-  const pillarMat = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 3), color: 0xd0735c, roughness: 0.82 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8b6a5e, roughness: 0.92 });
+  const pillarMat = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 3), color: 0xa3665a, roughness: 0.82 });
   const tileMat = new THREE.MeshStandardMaterial({ map: Tex.tile('tile.png', 10, 2), roughness: 0.82 });
   const beamMat = new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 6, 1), roughness: 0.86 });
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(25.4, 0.7, 7.8), stone); plinth.position.set(0, 0.35, -11.5); scene.add(plinth);
@@ -1177,11 +1176,11 @@ function buildScene() {
     if (i === 3 || i === 4) continue;
     const px = -9.6 + i * 2.75;
     for (let k = -1; k <= 1; k++) {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 4.4, 0.06), new THREE.MeshStandardMaterial({ color: 0xb08a4e, roughness: 0.7 }));
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 4.4, 0.06), new THREE.MeshStandardMaterial({ color: 0xa9946c, roughness: 0.7 }));
       bar.position.set(px + k * 0.6, 3.4, -8.06); scene.add(bar);
     }
     for (let k = -1; k <= 1; k++) {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.06, 0.06), new THREE.MeshStandardMaterial({ color: 0xb08a4e, roughness: 0.7 }));
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.06, 0.06), new THREE.MeshStandardMaterial({ color: 0xa9946c, roughness: 0.7 }));
       bar.position.set(px, 3.4 + k * 1.25, -8.06); scene.add(bar);
     }
   }
@@ -1193,7 +1192,7 @@ function buildScene() {
     r.rotation.x = Math.PI / 2;
     r.position.set(-12.3 + i * 0.7, 6.15, -10.2); scene.add(r);
   }
-  const bracketMat = new THREE.MeshStandardMaterial({ color: 0x8d5a34, roughness: 0.8 });
+  const bracketMat = new THREE.MeshStandardMaterial({ color: 0x7a6047, roughness: 0.8 });
   for (let i = 0; i < 9; i++) {
     if (i === 4) continue;
     const px = -11 + i * 2.75;
@@ -1202,7 +1201,7 @@ function buildScene() {
       b.position.set(px, 6.75 + k * 0.19, -8.0); scene.add(b);
     }
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.12, 12),
-      new THREE.MeshStandardMaterial({ color: 0xc9a052, roughness: 0.6 }));
+      new THREE.MeshStandardMaterial({ color: 0xb49a68, roughness: 0.6 }));
     cap.position.set(px, 6.05, -8.0); scene.add(cap);
   }
 
@@ -1220,11 +1219,11 @@ function buildScene() {
   }
   // 檐口一排金色瓦当：第三人称从下方看屋顶时才有细节，而不是一整块黑板
   const tileEndGeo = new THREE.CylinderGeometry(0.115, 0.115, 0.08, 10);
-  const tileEndMat = new THREE.MeshStandardMaterial({ color: 0xc2a15c, roughness: 0.65, metalness: 0.2 });
-  for (let i = 0; i < 50; i++) {
+  const tileEndMat = new THREE.MeshStandardMaterial({ color: 0xae9c72, roughness: 0.65, metalness: 0.2 });
+  for (let i = 0; i < 26; i++) {
     const e = new THREE.Mesh(tileEndGeo, tileEndMat);
     e.rotation.x = Math.PI / 2;
-    e.position.set(-13.2 + i * 0.54, 7.22, -7.02); scene.add(e);
+    e.position.set(-13.0 + i * 1.04, 7.22, -7.02); scene.add(e);
   }
   for (const s of [-1, 1]) {
     const tip = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.35, 8.8), tileMat);
@@ -1235,7 +1234,7 @@ function buildScene() {
 
   // 殿额：木底 + 金边匾额，不再是一张飘着的贴纸
   const plaqueBack = new THREE.Mesh(new THREE.BoxGeometry(5.7, 1.75, 0.22),
-    new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 1), color: 0x8a5b34, roughness: 0.75 }));
+    new THREE.MeshStandardMaterial({ map: Tex.tile('wood.png', 1, 1), color: 0x6f5b45, roughness: 0.75 }));
   plaqueBack.position.set(0, 6.5, -7.72); scene.add(plaqueBack);
   const bigPlaque = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 1.5),
     new THREE.MeshBasicMaterial({ map: plaqueTexture('静 照 院'), transparent: true, toneMapped: false }));
@@ -1313,17 +1312,18 @@ function buildScene() {
   const bandGeo = new THREE.TorusGeometry(0.63, 0.045, 6, 24);
   const makeCushion = (row, col, cx, cz) => {
     let clothMat = null;
+    const tone = [0xc9d1c8, 0xc4ccc4, 0xcfd5ca, 0xc1c9c2][(row * 3 + col) % 4];
     const c = GLB_CACHE.cushion
       ? GLB_CACHE.cushion.clone(true)
       : new THREE.Mesh(cushionGeo, new THREE.MeshStandardMaterial({
-          map: clothMap, color: row % 2 ? 0xe2e8ea : 0xd2dce1,
+          map: clothMap, color: tone,
           roughness: 0.96, emissive: 0xffc46a, emissiveIntensity: 0
         }));
     if (!GLB_CACHE.cushion) { c.scale.set(1, 0.2, 1); c.position.set(cx, 0.14, cz); clothMat = c.material; }
     else {
       c.position.set(cx, 0.005, cz);
       clothMat = new THREE.MeshStandardMaterial({
-        map: clothMap, color: row % 2 ? 0xe2e8ea : 0xd2dce1,
+        map: clothMap, color: tone,
         roughness: 0.96, emissive: 0xffc46a, emissiveIntensity: 0
       });
       c.traverse((o) => {
@@ -1333,7 +1333,7 @@ function buildScene() {
       });
     }
     if (!GLB_CACHE.cushion) {
-      const band = new THREE.Mesh(bandGeo, new THREE.MeshStandardMaterial({ color: 0xc2ab7c, roughness: 0.85 }));
+      const band = new THREE.Mesh(bandGeo, new THREE.MeshStandardMaterial({ color: 0xb1a17d, roughness: 0.85 }));
       band.rotation.x = Math.PI / 2; c.add(band);
     }
     c.receiveShadow = true;
@@ -1349,7 +1349,8 @@ function buildScene() {
   };
   for (let row = 0; row < CUSHION_ROWS; row++) {
     for (let col = 0; col < CUSHION_COLS; col++) {
-      const cx = col < 5 ? (col - 5) * CUSHION_X_STEP : (col - 4) * CUSHION_X_STEP;
+      const cx = (col < 5 ? (col - 5) * CUSHION_X_STEP : (col - 4) * CUSHION_X_STEP)
+        + (row % 2 ? 0.16 : -0.16);
       const cz = CUSHION_Z0 + row * CUSHION_Z_STEP;
       makeCushion(row, col, cx, cz);
     }
@@ -1357,8 +1358,8 @@ function buildScene() {
 
   // ---- 殿前长明灯：六角宫灯 + 宝盖 + 流苏 + 柔光晕（挂在檐下） ----
   lanternMeshes = [];
-  const lanternPaper = new THREE.MeshStandardMaterial({ color: 0xd8563f, emissive: 0xff8a3c, emissiveIntensity: 0.12, roughness: 0.72, transparent: true, opacity: 0.94 });
-  const lanternTrim = new THREE.MeshStandardMaterial({ color: 0xb8934f, roughness: 0.6, metalness: 0.25 });
+  const lanternPaper = new THREE.MeshStandardMaterial({ color: 0xa8635a, emissive: 0xd8a878, emissiveIntensity: 0.12, roughness: 0.72, transparent: true, opacity: 0.94 });
+  const lanternTrim = new THREE.MeshStandardMaterial({ color: 0xa7946d, roughness: 0.6, metalness: 0.25 });
   for (let i = 0; i < 10; i++) {
     const lx = -9.6 + i * 2.13;
     const g = new THREE.Group();
@@ -1551,6 +1552,12 @@ function buildScene() {
     blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
   }));
   scene.add(fireflies);
+
+  // 可交互物脚下一圈极淡的暖光，只提示「这里可以点」，跟随物件一起移动
+  for (const o of [catObj, incenseMesh, toadObj].filter(Boolean)) {
+    const g = softGlow(1.5, 0xd9c69b, 0.15);
+    g.position.set(0, 0.06, 0); g.raycast = () => {}; o.add(g);
+  }
 
   interactables = [ground, catObj, incenseMesh, toadObj, ...cushions, ...statues, monkObj, ...lanternMeshes, ...leafPiles].filter(Boolean);
 }
@@ -1994,14 +2001,27 @@ function setHover(obj, cx, cy) {
 }
 function pickRoot(e) {
   const rect = renderer.domElement.getBoundingClientRect();
-  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(interactables, true);
-  if (!hits.length) return null;
-  let obj = hits[0].object;
-  while (obj && !obj.userData.action) obj = obj.parent;
-  return obj ? { root: obj, point: hits[0].point } : null;
+  // 手指有约 44px 的落点误差：触摸时在周围补 8 条射线，优先命中「可交互物」而不是地面
+  const isTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+  const r = isTouch ? 22 : 0;
+  const offsets = r
+    ? [[0,0],[r,0],[-r,0],[0,r],[0,-r],[r*.7,r*.7],[-r*.7,r*.7],[r*.7,-r*.7],[-r*.7,-r*.7]]
+    : [[0,0]];
+  let walkHit = null;
+  for (const [ox, oy] of offsets) {
+    pointer.x = ((e.clientX + ox - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY + oy - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(interactables, true);
+    if (!hits.length) continue;
+    let obj = hits[0].object;
+    while (obj && !obj.userData.action) obj = obj.parent;
+    if (!obj) continue;
+    const res = { root: obj, point: hits[0].point };
+    if (obj.userData.action !== 'walk') return res;
+    if (!walkHit) walkHit = res;
+  }
+  return walkHit;
 }
 
 // ===================== 动作 / 走近后交互 =====================
@@ -2113,7 +2133,7 @@ function renderFocusObj(kind) {
     for (let i = 0; i < BEAD_N; i++) {
       const b = document.createElement('div'); b.className = 'bead' + (i === 0 ? ' tassel' : ''); ring.appendChild(b);
     }
-    const hint = document.createElement('div'); hint.className = 'bead-hint'; hint.id = 'beadHint'; hint.innerHTML = '⌃<br>⌄'; ring.appendChild(hint);
+    const hint = document.createElement('div'); hint.className = 'bead-hint'; hint.id = 'beadHint'; hint.textContent = '上下滑动'; ring.appendChild(hint);
     box.appendChild(ring); layoutBeads();
   } else if (kind === 'lamp') {
     const st = document.createElement('div'); st.className = 'lamp-stage'; st.id = 'lampStage';
@@ -2123,7 +2143,7 @@ function renderFocusObj(kind) {
         '<div class="lamp-stem"></div><div class="lamp-foot"></div></div>' +
       '<div class="lamp-wick" id="lampWick"><i class="lamp-flame"></i></div>' +
       '<div class="lamp-tag" id="lampTag"><b id="lampTagName"></b><span id="lampWishText"></span></div>' +
-      '<input class="lamp-wish" id="lampWish" maxlength="24" placeholder="写下此刻的心愿…" autocomplete="off" />' +
+      '<input class="lamp-wish" id="lampWish" maxlength="24" placeholder="写下此刻的心愿…" autocomplete="off" inputmode="text" enterkeyhint="done" />' +
       '<div class="lamp-hint" id="lampHint">写好愿望，轻点灯芯</div>';
     box.appendChild(st);
     bindLamp();
@@ -2174,6 +2194,7 @@ function renderFocusObj(kind) {
     const hint = document.createElement('div'); hint.className = 'focus-hint'; hint.textContent = '心诚则灵 · 不限次数'; box.appendChild(hint);
     bindCoin();
   }
+  applyPropSprites(kind, box);
 }
 function strikeMallet() {
   const m = $('mallet'); if (!m) return;
@@ -2556,6 +2577,8 @@ function trackPointerGround(e) {
 function onPointerMove(e) {
   if (state !== 'playing') return;
   trackPointerGround(e);
+  // 触屏没有 hover：手指划过就弹提示纸片会挡住佛像，只在鼠标上显示
+  if (e.pointerType && e.pointerType !== 'mouse') { clearHover(); return; }
   if (focusMode || performance.now() < sceneGuardUntil) return;
   const hit = pickRoot(e);
   if (!hit || hit.root.userData.action === 'walk') { clearHover(); return; }
@@ -2566,7 +2589,12 @@ function onPointerDown(e) {
   Sound.unlock();
   trackPointerGround(e);
   const hit = pickRoot(e);
-  if (!hit) return;
+  if (!hit) {
+    if (e.pointerType === 'touch' && performance.now() > (window.__lastMissTip || 0) + 2200) {
+      window.__lastMissTip = performance.now(); showToast('轻点物件或空地');
+    }
+    return;
+  }
   if (hit.root.userData.action === 'walk') {
     pending = null;
     if (catLife && catLife.state === 'wait') { catLife.wait = false; catPick(); }  // 不等了，猫继续过自己的日子
@@ -2587,10 +2615,20 @@ function onKey(e) {
 
 // ===================== 相机 / 标签 =====================
 function updateCamera() {
-  // 第三人称：镜头拉远一些、横向跟随，让大佛、五排 50 张拜垫与自己的小沙弥同框
-  const camTarget = new THREE.Vector3(monkObj.position.x * 0.62, 9.4, monkObj.position.z + 17.5);
+  // 第三人称：横屏沿用远随；竖屏换成「略高、更平、往后退」的专用机位，
+  // 让大殿、拜垫阵与荷池落在画面中段，而不是留一大片空天空。
+  const mx = monkObj.position.x, mz = monkObj.position.z;
+  let camTarget, lookX, lookY, lookZ;
+  if (camera.aspect < 0.72) {
+    // 视线压低、俯角加大：把远山背景压到画面上缘，大殿 / 拜垫 / 荷池顶满中下段
+    camTarget = new THREE.Vector3(mx * 0.4, 11.6, mz + 20.0);
+    lookX = mx * 0.28; lookY = 0.9; lookZ = mz - 8.4;
+  } else {
+    camTarget = new THREE.Vector3(mx * 0.62, 9.4, mz + 17.5);
+    lookX = mx * 0.62; lookY = 2.8; lookZ = mz - 10.5;
+  }
   camera.position.lerp(camTarget, 0.07);
-  camera.lookAt(monkObj.position.x * 0.62, 2.8, monkObj.position.z - 10.5);
+  camera.lookAt(lookX, lookY, lookZ);
 }
 function updateLabels() {
   if (!el.labels) return;
@@ -2746,13 +2784,14 @@ function frame(ts) {
 // ===================== 启动 =====================
 function initThree() {
   renderer = new THREE.WebGLRenderer({ canvas: $('scene'), antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const touchDevice = matchMedia('(hover: none)').matches || innerWidth < 700;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touchDevice ? 1.5 : 2));
   // 色彩管理 + 电影级色调映射 + 柔和阴影：让原画、贴图与 3D 物件待在同一套光里
   if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.32;
+  renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;   // r187 已移除 PCFSoftShadowMap
   camera = new THREE.PerspectiveCamera(58, 1, 0.1, 260);
   camera.position.set(0, 9.4, 24.5);
   raycaster = new THREE.Raycaster(); pointer = new THREE.Vector2();
@@ -2762,7 +2801,174 @@ function initThree() {
 function onResize() {
   const canvas = renderer.domElement; const w = canvas.clientWidth, h = canvas.clientHeight;
   if (!w || !h) return;
-  camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
+  const aspect = w / h;
+  camera.aspect = aspect;
+  // 竖屏水平视野被压得很窄：适度放大 fov，才能把大殿与两侧拜垫收进画面
+  camera.fov = aspect < 0.72 ? 68 : (aspect < 1.1 ? 62 : 58);
+  camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
+}
+
+
+// ===================== 放大界面：与 3D 场景同源的离屏渲染图 =====================
+// 以前每个放大面板都用 CSS 渐变另画一只猫 / 一只金蟾，和院子里的 3D 模型不是同一个东西。
+// 现在统一用同一套 Three.js 建模函数 + 同一套灯光，离屏渲染成透明 PNG 给面板使用。
+const PROP_SPRITES = {};
+const SPRITE_SIZE = 448;
+let spriteRT = null, spriteScene = null, spriteCam = null;
+
+function propMat(color, rough, metal) {
+  return new THREE.MeshStandardMaterial({ color: color, roughness: rough == null ? 0.82 : rough, metalness: metal || 0 });
+}
+function buildPropModel(key) {
+  // 场景里已有同款模型的，直接复用建模函数，保证「同源」而不是另画一只
+  if (key === 'bowl') return buildIncenseBurner();
+  if (key === 'cat') { const c = buildCat(); return c.group || c; }
+  if (key === 'toad') { const t = buildToad(); return t.group || t; }
+  const g = new THREE.Group();
+  const wood = propMat(0xa98257, 0.86), woodLt = propMat(0xc3a176, 0.8);
+  const dark = propMat(0x5c4c3a, 0.7), bronze = propMat(0xa08f6c, 0.5, 0.45);
+  if (key === 'fish') {
+    const body = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 20), wood);
+    body.scale.set(1.18, 0.82, 1.0); g.add(body);
+    // 木鱼的开口是一道弧形缝，不是横贯的黑条
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.10, 8, 28, Math.PI * 1.18), dark);
+    mouth.rotation.z = -0.08; mouth.scale.set(1.0, 0.42, 1.0);
+    mouth.position.set(0, -0.04, 0.99); g.add(mouth);
+    const cavity = new THREE.Mesh(new THREE.SphereGeometry(0.66, 18, 12), dark);
+    cavity.scale.set(1.0, 0.15, 0.06); cavity.position.set(0, -0.09, 1.0); g.add(cavity);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.035, 8, 28), woodLt);
+    rim.rotation.x = Math.PI / 2; rim.position.y = -0.02; g.add(rim);
+  } else if (key === 'mallet') {
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.1, 2.0, 10), woodLt);
+    stick.position.y = -0.35; g.add(stick);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.32, 18, 14), wood);
+    knob.position.y = 0.78; g.add(knob);
+  } else if (key === 'bead') {
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(1, 22, 18), woodLt));
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.1, 10), dark));
+  } else if (key === 'lamp') {
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.62, 0.42, 20), bronze);
+    bowl.position.y = 0.62; g.add(bowl);
+    const oil = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.04, 20), propMat(0xb9a26e, 0.4, 0.2));
+    oil.position.y = 0.84; g.add(oil);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.8, 12), bronze);
+    stem.position.y = 0.1; g.add(stem);
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.72, 0.18, 20), dark);
+    foot.position.y = -0.38; g.add(foot);
+    const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.28, 8), dark);
+    wick.position.set(0, 0.96, 0.28); g.add(wick);
+  } else if (key === 'holder') {
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.5, 1.5, 18), wood));
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.06, 8, 24), woodLt);
+    lip.rotation.x = Math.PI / 2; lip.position.y = 0.76; g.add(lip);
+    for (let i = -1; i <= 1; i++) {
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.6, 8), propMat(0xb98f5c, 0.85));
+      st.position.set(i * 0.2, 1.1, 0); st.rotation.z = i * 0.09; g.add(st);
+    }
+  } else if (key === 'candle') {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.14, 18), bronze);
+    base.position.y = -0.8; g.add(base);
+    const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, 1.5, 16), propMat(0xe0d6bc, 0.9));
+    g.add(wax);
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 12),
+      new THREE.MeshBasicMaterial({ color: 0xe8c687, transparent: true, opacity: 0.9 }));
+    flame.scale.set(0.7, 1.5, 0.7); flame.position.y = 0.92; g.add(flame);
+  }
+  return g;
+}
+function ensureSpriteStage() {
+  if (spriteRT) return true;
+  try {
+    spriteRT = new THREE.WebGLRenderTarget(SPRITE_SIZE, SPRITE_SIZE, {
+      minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat, type: THREE.UnsignedByteType, depthBuffer: true, stencilBuffer: false
+    });
+    spriteScene = new THREE.Scene();
+    spriteCam = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+    spriteCam.position.set(0, 1.05, 6.0); spriteCam.lookAt(0, 0.25, 0);
+    // 与主场景同一套光，保证放大图和院子里的物件看起来是同一种材质
+    spriteScene.add(new THREE.HemisphereLight(0xfff4df, 0x7c8277, 1.65));
+    const key = new THREE.DirectionalLight(0xffedcf, 2.3); key.position.set(4, 6, 5); spriteScene.add(key);
+    const fill = new THREE.DirectionalLight(0xc8d6cf, 0.85); fill.position.set(-4, 2, 4); spriteScene.add(fill);
+    const front = new THREE.DirectionalLight(0xfff6e4, 0.95); front.position.set(0, 1, 8); spriteScene.add(front);
+    return true;
+  } catch (e) { console.warn('sprite stage unavailable', e); return false; }
+}
+function renderPropSprite(key) {
+  // buildIncenseBurner 会往全局烟雾表登记 sprite；离屏用的那份不属于主场景，用完立刻撤回
+  const smokeLen = incenseSmoke.length;
+  const obj = buildPropModel(key);
+  if (incenseSmoke.length > smokeLen) incenseSmoke.length = smokeLen;
+  if (!obj) return null;
+  const holder = new THREE.Group(); holder.add(obj); spriteScene.add(holder);
+  obj.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  obj.scale.multiplyScalar(2.95 / maxDim);
+  obj.updateMatrixWorld(true);
+  const center = new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+  obj.position.sub(center); obj.position.y += 0.12;
+  // 猫的模型默认朝 +X，转 -90° 让它正面对着放大面板；金蟾保留四分之三侧
+  obj.rotation.y = key === 'cat' ? (-Math.PI / 2 + 0.18) : (key === 'toad' ? -0.25 : 0.12);
+
+  const prevTarget = renderer.getRenderTarget();
+  const prevColor = renderer.getClearColor(new THREE.Color()).clone();
+  const prevAlpha = renderer.getClearAlpha();
+  renderer.setRenderTarget(spriteRT);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear(true, true, true);
+  renderer.render(spriteScene, spriteCam);
+  const buf = new Uint8Array(SPRITE_SIZE * SPRITE_SIZE * 4);
+  renderer.readRenderTargetPixels(spriteRT, 0, 0, SPRITE_SIZE, SPRITE_SIZE, buf);
+  renderer.setRenderTarget(prevTarget);
+  renderer.setClearColor(prevColor, prevAlpha);
+  spriteScene.remove(holder);
+
+  // WebGL 像素自下而上，canvas 自上而下：逐行翻转成透明 PNG
+  const cv = document.createElement('canvas'); cv.width = cv.height = SPRITE_SIZE;
+  const ctx = cv.getContext('2d'); const out = ctx.createImageData(SPRITE_SIZE, SPRITE_SIZE);
+  const row = SPRITE_SIZE * 4;
+  for (let y = 0; y < SPRITE_SIZE; y++) {
+    out.data.set(buf.subarray((SPRITE_SIZE - 1 - y) * row, (SPRITE_SIZE - y) * row), y * row);
+  }
+  ctx.putImageData(out, 0, 0);
+  return cv.toDataURL('image/png');
+}
+async function buildPropSprites() {
+  if (!renderer || !ensureSpriteStage()) return;
+  const keys = ['fish', 'mallet', 'bead', 'lamp', 'holder', 'candle', 'bowl', 'cat', 'toad'];
+  for (const k of keys) {
+    try { PROP_SPRITES[k] = renderPropSprite(k); } catch (e) { console.warn('sprite fail', k, e); }
+    await new Promise((r) => setTimeout(r, 16));  // 分帧生成，别卡住首屏
+  }
+}
+// 把渲染图挂进面板 DOM；拿不到图就什么都不做，自动回退到原来的 CSS 画法
+function applyPropSprites(kind, box) {
+  const put = (key, sel, cls) => {
+    const url = PROP_SPRITES[key]; if (!url) return false;
+    const host = sel ? box.querySelector(sel) : box;
+    if (!host) return false;
+    const im = document.createElement('img');
+    im.className = 'prop-img ' + (cls || ''); im.src = url; im.alt = ''; im.draggable = false;
+    host.insertBefore(im, host.firstChild);
+    return true;
+  };
+  let ok = false;
+  if (kind === 'fish') ok = put('fish', '.woodfish', 'prop-fish') && put('mallet', '.mallet', 'prop-mallet');
+  else if (kind === 'beads') {
+    const url = PROP_SPRITES.bead;
+    if (url) box.querySelectorAll('.bead').forEach((b) => {
+      b.style.backgroundImage = 'url("' + url + '")';
+      b.style.backgroundSize = 'contain'; b.style.backgroundRepeat = 'no-repeat';
+      b.style.backgroundPosition = 'center';
+    });
+    ok = !!url;
+  } else if (kind === 'lamp') ok = put('lamp', '.lamp-stage', 'prop-lamp');
+  else if (kind === 'incense') ok = put('holder', '.i-holder', 'prop-holder') && put('candle', '.i-candle', 'prop-candle') && put('bowl', '.i-bowl', 'prop-bowl');
+  else if (kind === 'pet') ok = put('cat', '.cat-stage', 'prop-cat');
+  else if (kind === 'coin') ok = put('toad', '.toad', 'prop-toad');
+  if (ok) box.classList.add('sprite-mode');
 }
 
 async function boot() {
@@ -2794,6 +3000,7 @@ async function boot() {
   }
   await preloadGLB();   // Blender 建模资产（失败自动回退程序化建模）
   initThree(); buildScene(); updateLanterns(); updateHUD();
+  setTimeout(buildPropSprites, 500);   // 生成 6 个放大面板的同源 3D 渲染图
   Sound.loadSamples();   // 预载写实木鱼 / 念珠 / 点灯采样，首次手势后即可播放
   // 淡入：先让 3D 画面露出来，再收掉遮罩
   requestAnimationFrame(() => setTimeout(() => { if (el.veil) el.veil.classList.add('gone'); }, 180));
@@ -2853,13 +3060,28 @@ async function boot() {
   canvas.addEventListener('pointerleave', clearHover);
   canvas.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('keydown', onKey);
+  // 手机键盘弹起时 visualViewport 会变矮：把放大面板底边抬高，别让心愿输入框被键盘盖住
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    const syncVV = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      el.focus.style.bottom = kb > 90 ? kb + 'px' : '';
+    };
+    vv.addEventListener('resize', syncVV); vv.addEventListener('scroll', syncVV);
+  }
   el.mute.addEventListener('click', toggleMute);
   $('reset').addEventListener('click', resetSave);
   $('focusClose').addEventListener('click', closeFocus);
   // 木鱼 / 念珠：固定在右下角，点一下直接开面板，不用在场景里找
-  const dockFish = $('dockFish'), dockBeads = $('dockBeads');
-  if (dockFish) dockFish.addEventListener('click', () => { if (!focusMode) { Sound.unlock(); openFocus('fish'); } });
-  if (dockBeads) dockBeads.addEventListener('click', () => { if (!focusMode) { Sound.unlock(); openFocus('beads'); } });
+  // 用 pointerdown 而非 click：手机上少一次 300ms 判定，也不会留下点击高亮
+  const bindDock = (node, kind) => {
+    if (!node) return;
+    node.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (!focusMode) { Sound.unlock(); openFocus(kind); }
+    });
+  };
+  bindDock($('dockFish'), 'fish'); bindDock($('dockBeads'), 'beads');
 
   // 通用聚焦输入：只对木鱼 / 念珠生效，上香与撸猫由各自的子元素处理
   el.focusObj.addEventListener('pointerdown', (e) => {
@@ -2909,6 +3131,7 @@ window.addEventListener('unhandledrejection', (e) => {
 window.addEventListener('error', (e) => {
   if (window.__zenReady && e.message) { window.__zenReady = false; window.__zenError = e.message; }
 });
+
 
 
 

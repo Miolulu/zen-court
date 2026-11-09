@@ -2,19 +2,22 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>小沙弥静修 · 静照院</title>
 <style>
   :root{
-    --paper:#f2e8d2; --paper-2:#e6d8ba; --ink:#2e2b26; --ink-soft:#5c574c;
-    --gold:#c9a052; --gold-lt:#e8cf94; --cinnabar:#a8433a; --jade:#6e8b80;
+    --paper:#ece5d5; --paper-2:#dcd2ba; --ink:#2e3532; --ink-soft:#5d6158;
+    --gold:#b49a68; --gold-lt:#d9c69b; --cinnabar:#96574c; --jade:#788b80;
     --paper-tex:url('assets/art/paper.png');
   }
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%;overflow:hidden;background:#20262a;color:var(--paper);
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+  button,input,textarea{-webkit-appearance:none;appearance:none;outline:none;touch-action:manipulation}
+  button:focus-visible,a:focus-visible{outline:2px solid var(--gold-lt);outline-offset:2px}
+  button:active{filter:brightness(.94)}
+  html,body{margin:0;height:100%;overflow:hidden;background:#2b322f;color:var(--paper);
     font-family:"Kaiti SC","STKaiti","KaiTi","Songti SC","STSong","SimSun",serif;
     user-select:none;-webkit-user-select:none}
-  #stage{position:fixed;inset:0;overflow:hidden;background:#8d9a96}
+  #stage{position:fixed;inset:0;overflow:hidden;background:#b7bcb0}
   canvas{display:block;width:100%;height:100%;touch-action:none}
   #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 
@@ -25,7 +28,7 @@
   .vignette{position:fixed;inset:0;z-index:11;pointer-events:none;
     background:radial-gradient(ellipse at 50% 44%,transparent 42%,rgba(38,34,26,.34) 100%)}
   /* 遮罩压在赐名卷轴之下：进庙第一眼就能看到法号，画面再从背后淡入 */
-  #veil{position:fixed;inset:0;z-index:55;pointer-events:none;background:#20262a;
+  #veil{position:fixed;inset:0;z-index:55;pointer-events:none;background:#2b322f;
     transition:opacity 1.5s ease}
   #veil.gone{opacity:0}
 
@@ -58,11 +61,12 @@
     font-variant-numeric:tabular-nums}
 
   .tools{position:fixed;right:22px;top:22px;z-index:20;display:flex;gap:8px}
-  .tools button{font:inherit;font-size:12px;letter-spacing:2px;color:#f0e4cb;cursor:pointer;
+  .tools button{font:inherit;font-size:12px;letter-spacing:2px;color:#4a4234;cursor:pointer;
     height:44px;padding:0 14px;border-radius:22px;
-    background:rgba(30,34,32,.55);border:1px solid rgba(201,160,82,.45);
-    backdrop-filter:blur(6px);transition:all .25s;line-height:1.25}
-  .tools button:hover{border-color:var(--gold-lt);background:rgba(168,67,58,.7);transform:translateY(-2px)}
+    background-image:var(--paper-tex);background-color:rgba(240,230,208,.92);
+    border:1px solid rgba(120,96,58,.5);transition:all .25s;line-height:1.25;
+    box-shadow:0 6px 18px rgba(18,24,20,.22),inset 0 0 0 3px rgba(255,255,255,.2)}
+  .tools button:hover{border-color:var(--cinnabar);transform:translateY(-2px)}
 
   /* ---------------- 右下角：木鱼 / 念珠 工具坞（不用在场景里找） ---------------- */
   .dock{position:fixed;right:22px;bottom:26px;z-index:22;display:flex;flex-direction:column;gap:10px}
@@ -78,9 +82,13 @@
   .dock-btn .lbl{display:block;font-size:14px;letter-spacing:3px;color:#3a3020;line-height:1.2;font-weight:normal}
   .dock-btn .sub{display:block;font-size:10px;letter-spacing:2px;color:#8a7550;margin-top:2px}
   .dock-btn:active{transform:scale(.97)}
+  .dock-btn svg{pointer-events:none}
 
   .presence{position:fixed;left:24px;bottom:20px;z-index:20;font-size:12px;letter-spacing:2px;
-    color:#f4ead4;opacity:.78;pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,.7);
+    color:#544a39;opacity:.9;pointer-events:none;
+    background-image:var(--paper-tex);background-color:rgba(239,230,209,.88);
+    border:1px solid rgba(120,96,58,.4);border-radius:14px;padding:5px 11px;
+    box-shadow:0 4px 14px rgba(18,24,20,.2);
     display:flex;align-items:center;gap:8px}
   .presence::before{content:'';width:6px;height:6px;border-radius:50%;background:#c9d6a6;
     box-shadow:0 0 8px 2px rgba(201,214,166,.7);animation:breathe 3s ease-in-out infinite}
@@ -162,7 +170,7 @@
 
   /* ---------------- 独立放大界面（木鱼/念珠/上香/撸猫/点灯） ---------------- */
   #focus{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse at 50% 42%,rgba(74,60,42,.8),rgba(14,17,16,.95));
+    background:radial-gradient(ellipse at 50% 42%,rgba(92,98,88,.74),rgba(26,32,30,.94));
     backdrop-filter:blur(12px)}
   #focus.show{display:flex;animation:focusIn .42s ease both}
   @keyframes focusIn{from{opacity:0}to{opacity:1}}
@@ -180,7 +188,7 @@
   #focus .count{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);
     font-size:13px;opacity:.72;letter-spacing:4px;pointer-events:none;white-space:nowrap;
     color:var(--gold-lt);text-shadow:0 2px 8px rgba(0,0,0,.7)}
-  #focus .obj{position:relative;width:min(58vmin,430px);height:min(58vmin,430px);cursor:pointer;
+  #focus .obj{position:relative;width:min(58vmin,430px);height:min(58vmin,430px);cursor:pointer;touch-action:none;
     display:flex;align-items:center;justify-content:center;z-index:2;
     animation:objIn .5s cubic-bezier(.2,1.3,.4,1) both;
     transition:transform .14s cubic-bezier(.2,1.5,.5,1)}
@@ -501,7 +509,7 @@
   .lamp-tag span{writing-mode:vertical-rl;max-height:176px;font-size:16px;line-height:1.7;
     letter-spacing:3px;color:#f5e4bd;overflow:hidden}
   .lamp-wish{position:absolute;left:50%;bottom:2%;transform:translateX(-50%);width:min(62%,360px);
-    padding:9px 16px;font:inherit;font-size:14px;letter-spacing:2px;text-align:center;
+    padding:9px 16px;font:inherit;font-size:16px;letter-spacing:2px;text-align:center;
     color:var(--paper);background:rgba(20,16,12,.6);border:1px solid rgba(212,175,55,.35);
     border-radius:20px;outline:none;transition:border-color .2s,box-shadow .2s}
   .lamp-wish::placeholder{color:rgba(243,234,214,.4)}
@@ -523,6 +531,96 @@
   #fullGate .card b{display:block;color:var(--cinnabar);font-size:25px;font-weight:normal;letter-spacing:8px;margin-bottom:8px}
   #fullGate .card span{font-size:13px;opacity:.82}
   #fullGate .card small{display:block;margin-top:14px;font-size:12px;opacity:.55;letter-spacing:1px}
+
+  /* ---- 手机竖屏：HUD 与工具错开、放大主体放大、操作提示改手势 ---- */
+  @media (max-width:600px) and (orientation:portrait){
+    .hud{left:10px;top:10px;width:158px;padding:7px 9px 8px}
+    .hud .dharma-row{padding-bottom:5px;margin-bottom:5px;gap:7px}
+    .seal{flex-basis:26px;width:26px;height:26px;font-size:9px}
+    .dharma-txt small{font-size:8px;letter-spacing:1px}
+    .dharma-txt b{font-size:17px;letter-spacing:2px}
+    .stats{gap:2px}.stat{font-size:10px;letter-spacing:1px}.stat b{font-size:11px}
+    .tools{right:10px;top:10px;gap:6px}
+    .tools button{height:34px;padding:0 9px;font-size:10px;letter-spacing:1px;border-radius:17px}
+    .dock{right:10px;bottom:calc(12px + env(safe-area-inset-bottom));gap:7px}
+    .dock-btn{padding:6px 9px 6px 7px;gap:7px;border-radius:10px;min-height:44px}
+    .dock-btn svg{width:24px;height:24px;flex-basis:24px}
+    .dock-btn .lbl{font-size:12px;letter-spacing:1px}.dock-btn .sub{font-size:9px;letter-spacing:1px}
+    .presence{left:10px;bottom:calc(14px + env(safe-area-inset-bottom));font-size:9px;letter-spacing:1px;padding:4px 8px;max-width:50vw}
+    .toast{top:100px;font-size:12px;letter-spacing:2px;padding:6px 14px;max-width:86vw;white-space:normal;text-align:center}
+    .scroll{width:min(92vw,430px)}
+    .scroll .sheet{padding:24px 18px 54px}
+    .scroll .name{font-size:40px;letter-spacing:9px}
+    .scroll .wish{font-size:11px;letter-spacing:2px}
+    #focus .obj{width:min(84vw,420px);height:min(46vh,420px)}
+    #focus.wide .obj{width:min(94vw,560px);height:min(60vh,480px)}
+    #focus.beads-big .obj{width:min(88vw,460px);height:min(56vh,460px)}
+    #focus.lamp-focus .obj{width:min(94vw,560px);height:min(64vh,500px)}
+    #focus .close{right:12px;top:calc(10px + env(safe-area-inset-top));padding:9px 14px;font-size:11px;min-height:40px}
+    #focus .count{bottom:calc(9% + env(safe-area-inset-bottom));font-size:12px;letter-spacing:2px}
+    .coin-scene{width:min(94vw,560px);height:min(60vh,480px)}
+    .coin-hint{font-size:10px;letter-spacing:1px}
+    .lamp-wish{width:78%}
+    .focus-hint{font-size:11px;letter-spacing:2px}
+    .bead-hint{display:none}
+    .cat-stage{width:100%;height:100%}
+    #focus.beads-big .obj{width:min(88vw,460px);height:min(88vw,460px)}
+    .coin-scene{width:min(94vw,560px);height:min(42vh,340px)}
+    .coin-water{height:54%;border-radius:50%/28%}
+    .coin-scene .coin-hint{display:none}
+    .sprite-mode .toad{width:150px;height:120px;top:7%}
+    .sprite-mode .prop-toad{transform:scale(1.45);transform-origin:50% 72%}
+    .sprite-mode .toad-mouth{left:34%;top:22%;width:32%;height:24%}
+  }
+  /* ---- 手机横屏：HUD 收窄、工具坞压缩、面板按可用高度走 ---- */
+  @media (max-height:480px) and (orientation:landscape){
+    .hud{left:8px;top:8px;width:148px;padding:5px 8px}
+    .hud .dharma-row{padding-bottom:3px;margin-bottom:3px}
+    .seal{width:22px;height:22px;flex-basis:22px;font-size:8px}
+    .dharma-txt small{font-size:8px}.dharma-txt b{font-size:15px;letter-spacing:2px}
+    .stats{gap:1px}.stat{font-size:9px}.stat b{font-size:10px}
+    .tools{right:8px;top:8px;gap:5px}.tools button{height:30px;padding:0 9px;font-size:10px}
+    .dock{right:8px;bottom:8px;gap:5px}.dock-btn{padding:4px 8px;min-height:38px;border-radius:9px}
+    .dock-btn svg{width:20px;height:20px;flex-basis:20px}
+    .dock-btn .lbl{font-size:11px;letter-spacing:1px}.dock-btn .sub{display:none}
+    .presence{left:8px;bottom:8px;font-size:9px;padding:3px 8px}
+    .toast{top:16px;font-size:11px;padding:5px 12px}
+    .scroll{width:min(56vw,430px)}.scroll .sheet{padding:12px 16px 32px}
+    .scroll .name{font-size:30px;letter-spacing:7px}.scroll .wish{font-size:10px}
+    .scroll .eyebrow{margin-bottom:6px}.scroll .divider{margin:8px 20px}
+    #focus .obj{width:min(48vh,340px);height:min(48vh,340px)}
+    #focus.wide .obj{width:min(62vw,600px);height:min(78vh,360px)}
+    #focus.beads-big .obj{width:min(48vh,340px);height:min(48vh,340px)}
+    #focus.lamp-focus .obj{width:min(62vw,600px);height:min(80vh,370px)}
+    #focus .close{right:10px;top:8px;padding:6px 12px}
+    #focus .count{bottom:5%;font-size:11px}
+    .coin-scene,.lamp-stage,.incense-stage,.cat-stage{width:100%;height:100%}
+  }
+  @media (hover:none){#hoverTip{display:none!important}}
+
+  /* ---- 放大面板：主体换成与 3D 场景同源的离屏渲染图 ---- */
+  .prop-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;
+    filter:drop-shadow(0 14px 26px rgba(14,18,16,.42))}
+  .sprite-mode .woodfish{background:none;box-shadow:none;border-radius:0;width:92%;height:70%}
+  .sprite-mode .mallet{left:60%;top:22%;width:34%;height:72%}
+  .sprite-mode .prop-fish,.sprite-mode .prop-mallet,.sprite-mode .prop-lamp,.sprite-mode .prop-cat{transform:scale(1.14)}
+  .sprite-mode .i-item .prop-img{transform:scale(1.5)}
+  .sprite-mode .toad .prop-toad{transform:scale(1.8);transform-origin:50% 72%}
+  .sprite-mode .woodfish::before,.sprite-mode .woodfish::after{display:none}
+  .sprite-mode .mallet .stick,.sprite-mode .mallet .knob{display:none}
+  .sprite-mode .bead{background-color:transparent;box-shadow:none;border:0;border-radius:0}
+  .sprite-mode .lamp-bowl,.sprite-mode .lamp-oil,.sprite-mode .lamp-stem,.sprite-mode .lamp-foot,
+  .sprite-mode .lamp-wick::before,
+  .sprite-mode .cat-body,.sprite-mode .cat-head,.sprite-mode .cat-paw,.sprite-mode .cat-tail,.sprite-mode .cat-purr,
+  .sprite-mode .toad-body,.sprite-mode .toad-head,.sprite-mode .toad-eye,.sprite-mode .toad-leg,
+  .sprite-mode .i-holder .tube,.sprite-mode .i-holder i,
+  .sprite-mode .i-candle .wax,.sprite-mode .i-bowl .body,.sprite-mode .i-bowl .ash,
+  .sprite-mode .i-bowl .ear,.sprite-mode .i-bowl .legs{visibility:hidden}
+  .sprite-mode .lamp-wick{width:34%;height:34%;bottom:44%}
+  .sprite-mode .toad-mouth{left:36%;top:24%;width:28%;height:22%}
+  .sprite-mode .toad-mouth .toad-coin{visibility:hidden}
+  .sprite-mode .cat-stage.petting .prop-cat{animation:propPurr .55s ease-in-out infinite alternate}
+  @keyframes propPurr{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.025) rotate(1deg)}}
 </style>
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
@@ -635,6 +733,6 @@
   }, 4000);
 })();
 </script>
-<script type="module" src="game.js?v=38"></script>
+<script type="module" src="game.js?v=40"></script>
 </body>
 </html>
