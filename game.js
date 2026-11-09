@@ -12,6 +12,36 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// 色调分级：线性空间里做极轻的暖调、对比与暗角，最后交给 OutputPass 做 ACES + sRGB
+const GradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uWarm: { value: 0.022 },
+    uVignette: { value: 0.14 },
+    uContrast: { value: 1.02 }
+  },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: [
+    'uniform sampler2D tDiffuse; uniform float uWarm, uVignette, uContrast; varying vec2 vUv;',
+    'void main(){',
+    '  vec4 c = texture2D(tDiffuse, vUv);',
+    '  c.rgb = (c.rgb - 0.5) * uContrast + 0.5;',
+    '  c.r = min(1.0, c.r + uWarm * 0.9);',
+    '  c.b = max(0.0, c.b - uWarm * 0.55);',
+    '  float v = smoothstep(0.82, 0.20, length(vUv - 0.5) * 1.42);',
+    '  c.rgb *= mix(1.0 - uVignette, 1.0, v);',
+    '  gl_FragColor = c;',
+    '}'
+  ].join('\n')
+};
+
+
 // ===================== Blender GLB 资产（tools/gen_blender_models.py 生成） =====================
 // monk / cushion / toad 由 Blender 建模导出；加载失败自动回退到程序化建模。
 // GLB 材质按语义命名（robe/skin/cloth/gold...），载入后替换为游戏的 toon / 贴图材质，风格保持统一。
@@ -334,7 +364,7 @@ const Sound = (function () {
 })();
 
 // ===================== Three 全局 =====================
-let renderer, scene, camera, raycaster, pointer;
+let renderer, scene, camera, raycaster, pointer, composer = null, usePost = false, gradePass = null, introT = 0;
 let ground, monkObj, catObj, bowPivot, hands, woodfishMesh, beadsMesh, incenseMesh, pondCoinsGroup = null;
 let monkRig = null;   // 合十动画骨架（双手家位 + 袖臂静息角），buildMonk 时赋值
 let monkLower = null, monkKnees = null;
@@ -442,6 +472,23 @@ function inkOutline(mesh, scale) {
 }
 
 // ===================== 程序化贴图 =====================
+
+// 程序化微凹凸：给石板 / 木构补一层极淡的表面起伏，斜阳下才有材质呼吸感
+function makeBumpTexture(size) {
+  size = size || 128;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d'); const img = g.createImageData(size, size);
+  for (let i = 0; i < size * size; i++) {
+    const n = 112 + Math.random() * 34;
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = n;
+    img.data[i * 4 + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
 function makeSkyTexture() {
   const c = document.createElement('canvas'); c.width = 16; c.height = 256; const g = c.getContext('2d');
   const grd = g.createLinearGradient(0, 0, 0, 256);
@@ -1121,35 +1168,39 @@ function buildIncenseBurner() {
 function buildScene() {
   flames = []; pondRings = []; wishTags = [];
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xc2c6b8);
-  scene.fog = new THREE.Fog(0xc9c8b8, 30, 100);
+  scene.background = new THREE.Color(0xdcd6c6);
+  scene.fog = new THREE.Fog(0xdcd6c6, 28, 96);   // 雾色介于远山底部与石板之间，地面远端充分沉入雾里
 
   // 远山雾景原画：衬在寺院背后，不吃雾、不吃色调映射，像一张画
-  const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(180, 110),
+  // 加宽到 260：横屏 aspect 2.16 的水平视野更宽，180 会露出平面左右边缘
+  const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(260, 110),
     new THREE.MeshBasicMaterial({ map: Tex.flat('backdrop.jpg'), fog: false, depthWrite: false, toneMapped: false }));
   backdrop.position.set(0, 16, -72); backdrop.renderOrder = -10; scene.add(backdrop);
 
   // 光：右上方暖金斜阳 + 冷色天光补面 + 佛前一点暖光；主光投柔和阴影
-  scene.add(new THREE.HemisphereLight(0xf3ebd8, 0x6c7269, 0.85));
-  const sun = new THREE.DirectionalLight(0xf7e3c2, 1.45);
-  sun.position.set(16, 24, 14); sun.castShadow = true;
+  scene.add(new THREE.HemisphereLight(0xf3ebd8, 0x6c7269, 0.74));   // 略降平光，留出明暗层次
+  const sun = new THREE.DirectionalLight(0xffe4ba, 1.85);           // 晨光斜射，长柔影
+  sun.position.set(19, 17, 12); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   const sc = sun.shadow.camera;
-  sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.near = 1; sc.far = 90;
-  sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.025;
+  sc.left = -38; sc.right = 38; sc.top = 38; sc.bottom = -38; sc.near = 1; sc.far = 110;
+  sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.025; sun.shadow.radius = 2.5;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xaabbb8, 0.32); fill.position.set(-14, 10, 8); scene.add(fill);
-  const altarLight = new THREE.PointLight(0xf4d6a2, 1.9, 20, 2);
+  const fill = new THREE.DirectionalLight(0xaabbb8, 0.22); fill.position.set(-14, 10, 8); scene.add(fill);
+  const altarLight = new THREE.PointLight(0xffcf94, 2.4, 24, 2);    // 佛前唯一暖亮点
   altarLight.position.set(0, 4.0, -10.6); scene.add(altarLight);
 
-  ground = new THREE.Mesh(new THREE.PlaneGeometry(90, 90),
-    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 12, 12), roughness: 0.97 }));
+  // 地面放大到 200×200：远端边缘远到被雾完全吞掉，不再出现平面尽头的斜切
+  const stoneBump = makeBumpTexture(); stoneBump.repeat.set(26, 26);
+  ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 26, 26), bumpMap: stoneBump, bumpScale: 0.028, roughness: 0.97 }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
   ground.userData.action = 'walk'; scene.add(ground);
 
   // 拜垫区铺一层略深的石板，把「殿前礼佛空间」从大庭院里分出来
+  const courtBump = makeBumpTexture(); courtBump.repeat.set(5, 3);
   const court = new THREE.Mesh(new THREE.PlaneGeometry(26, 13),
-    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 5, 3), color: 0xc7c1b0, roughness: 0.97 }));
+    new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 5, 3), bumpMap: courtBump, bumpScale: 0.024, color: 0xc7c1b0, roughness: 0.97 }));
   court.rotation.x = -Math.PI / 2; court.position.set(0, 0.012, -2.0);
   court.receiveShadow = true; court.raycast = () => {}; scene.add(court);
 
@@ -2615,7 +2666,7 @@ function onKey(e) {
 }
 
 // ===================== 相机 / 标签 =====================
-function updateCamera() {
+function updateCamera(dt) {
   // 第三人称：横屏沿用远随；竖屏换成「略高、更平、往后退」的专用机位，
   // 让大殿、拜垫阵与荷池落在画面中段，而不是留一大片空天空。
   const mx = monkObj.position.x, mz = monkObj.position.z;
@@ -2628,7 +2679,15 @@ function updateCamera() {
     camTarget = new THREE.Vector3(mx * 0.62, 9.4, mz + 17.5);
     lookX = mx * 0.62; lookY = 2.8; lookZ = mz - 10.5;
   }
-  camera.position.lerp(camTarget, 0.07);
+  // 入场缓推：按真实时间推进（不依赖帧率），起点只略高略远，避免拉远后露出远山平面边缘
+  introT = Math.min(1, introT + (dt || 0.016) / 2.4);
+  const e = 1 - Math.pow(1 - introT, 3);
+  if (introT < 1) {
+    const introStart = new THREE.Vector3(camTarget.x - 1.4, camTarget.y + 4.8, camTarget.z + 5.2);
+    camera.position.copy(introStart.lerp(camTarget, e));
+  } else {
+    camera.position.lerp(camTarget, 0.07);
+  }
   camera.lookAt(lookX, lookY, lookZ);
 }
 function updateLabels() {
@@ -2777,8 +2836,9 @@ let lastTs = 0;
 function frame(ts) {
   const dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0; lastTs = ts;
   if (state === 'playing') update(dt);
-  updateCamera(); updateLabels();
-  renderer.render(scene, camera);
+  updateCamera(dt); updateLabels();
+  if (usePost && composer) composer.render(dt);
+  else renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 
@@ -2790,14 +2850,29 @@ function initThree() {
   // 色彩管理 + 电影级色调映射 + 柔和阴影：让原画、贴图与 3D 物件待在同一套光里
   if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.16;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;   // r187 已移除 PCFSoftShadowMap
   camera = new THREE.PerspectiveCamera(58, 1, 0.1, 260);
-  camera.position.set(0, 9.4, 24.5);
+  camera.position.set(-1.4, 14.2, 27.8);   // 入场运镜起点：略高略远，不拉到露出远山边缘
   raycaster = new THREE.Raycaster(); pointer = new THREE.Vector2();
   window.addEventListener('resize', onResize);
   onResize();
+}
+function initPost() {
+  const touch = matchMedia('(hover: none)').matches || innerWidth < 700;
+  usePost = !touch;   // 触屏直接走 renderer.render，省掉一次全屏合成与 Bloom
+  if (!usePost || !renderer || !scene || !camera) return;
+  try {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    gradePass = new ShaderPass(GradeShader);
+    composer.addPass(gradePass);
+    // 只让佛前暖光与纸灯这种极亮处轻微晕开，不做年节感的泛光
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.16, 0.42, 0.92));
+    composer.addPass(new OutputPass());
+    onResize();
+  } catch (e) { console.warn('post fx unavailable', e); composer = null; usePost = false; }
 }
 function onResize() {
   const canvas = renderer.domElement; const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -2807,6 +2882,7 @@ function onResize() {
   // 竖屏水平视野被压得很窄：适度放大 fov，才能把大殿与两侧拜垫收进画面
   camera.fov = aspect < 0.72 ? 68 : (aspect < 1.1 ? 62 : 58);
   camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
+  if (composer) composer.setSize(w, h);
 }
 
 
@@ -3000,7 +3076,7 @@ async function boot() {
     selfLabel.textContent = myName;
   }
   await preloadGLB();   // Blender 建模资产（失败自动回退程序化建模）
-  initThree(); buildScene(); updateLanterns(); updateHUD();
+  initThree(); buildScene(); initPost(); updateLanterns(); updateHUD();
   setTimeout(buildPropSprites, 500);   // 生成 6 个放大面板的同源 3D 渲染图
   Sound.loadSamples();   // 预载写实木鱼 / 念珠 / 点灯采样，首次手势后即可播放
   // 淡入：先让 3D 画面露出来，再收掉遮罩
