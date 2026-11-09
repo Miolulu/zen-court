@@ -11,6 +11,7 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
+import { Monk2D, Cat2D } from './monk2d.js';  // 2.5D 纸片小沙弥 / 橘猫（取代几何体堆砌）
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -429,6 +430,7 @@ const Sound = (function () {
 // ===================== Three 全局 =====================
 let renderer, scene, camera, raycaster, pointer, composer = null, usePost = false, gradePass = null, introT = 0;
 let ground, monkObj, catObj, bowPivot, hands, woodfishMesh, beadsMesh, incenseMesh, pondCoinsGroup = null;
+let monk2dSelf = null, cat2d = null;   // 2.5D 纸片角色（覆盖在 3D 小沙弥 / 寺猫之上）
 let monkRig = null;   // 合十动画骨架（双手家位 + 袖臂静息角），buildMonk 时赋值
 let monkLower = null, monkKnees = null;
 let cushions = [], statues = [], lanternMeshes = [], incenseSmoke = [], leafPiles = [];
@@ -1765,6 +1767,10 @@ function buildScene() {
   monkLower = m.lower; monkKnees = m.knees; monkRig = m.rig;
   monkObj.traverse(o => { if (o.isMesh) o.castShadow = true; });
   monkObj.userData = { action: 'clasp', self: true }; scene.add(monkObj);
+  // 2.5D 纸片小沙弥：覆盖在 3D 小沙弥之上，隐藏原几何体（不再「几何堆叠」）
+  monk2dSelf = new Monk2D({ robe: ROBE_BLUES[0], robeShade: '#697871', skin: '#F0D9C0', sash: '#B0492F' });
+  monk2dSelf.group.position.copy(monkObj.position); scene.add(monk2dSelf.group);
+  m.group.visible = false;
   monkShadow = softShadow(2.1, 0.32); scene.add(monkShadow);
   // 跪拜时垫子上升起的一团暖光：远处看也知道有人正在礼拜
   kneelGlow = softGlow(3.2, 0xffcf8a, 0);
@@ -1774,6 +1780,10 @@ function buildScene() {
   catObj.userData = { action: 'pet', dynamic: true };
   catObj.traverse(o => { if (o.isMesh) o.castShadow = true; });
   scene.add(catObj);
+  // 2.5D 橘猫：覆盖在 3D 猫之上，隐藏原几何体
+  cat2d = new Cat2D({ fur: '#E0922F', furShade: '#C9771F' });
+  cat2d.group.position.copy(catObj.position); scene.add(cat2d.group);
+  catObj.visible = false;
   catShadow = softShadow(1.5, 0.28); scene.add(catShadow);
 
   // 悬停提示：地面柔光盘 + 一圈细金环，比原来的硬边圆环柔和
@@ -2344,7 +2354,8 @@ function trigger(id, obj) {
   }
   if (id === 'sweep') { sweepLeafPile(obj); doAction(id); return; }
   monkPose = id; monkPoseT = 0.8;
-  if (META[id].focus) openFocus(id);
+  // 世界内动作演出（取代放大面板）：木鱼/念珠/点灯/上香/撸猫 直接在小沙弥身上演，不再弹窗
+  if (META[id].focus) (id === 'coin' ? openFocus(id) : worldAction(id, obj));
   else doAction(id);
 }
 // 点拜垫：走到垫子上跪下并保持；再点一次才起身。换垫子视为重新礼拜。
@@ -2373,6 +2384,8 @@ function toggleKneel(cushion, force) {
   if (hovered && (hovered.userData.action === 'bow' || hovered.userData.action === 'worship')) {
     el.tip.querySelector('.d').textContent = kneeling ? '起身' : '拜一拜';
   }
+  // 2.5D 小沙弥：跪拜时演「俯身礼拜」
+  if (monk2dSelf) { if (kneeling) monk2dSelf.play('bow'); else monk2dSelf.stop(); }
 }
 function approachAndDo(obj) {
   const id = obj.userData.action;
@@ -2501,6 +2514,17 @@ function strikeMallet() {
   setTimeout(() => m.classList.remove('hit'), 145);
   const sp = document.createElement('div'); sp.className = 'spark'; el.focusObj.appendChild(sp);
   setTimeout(() => sp.remove(), 380);
+}
+// 世界内动作演出：小沙弥在 3D 场景里直接做仪式动作（不再弹放大面板）
+const ACT2ANIM = { fish: 'woodfish', beads: 'beads', lamp: 'lamp', incense: 'incense', pet: 'pet' };
+function worldAction(id, obj) {
+  const a = ACT2ANIM[id];
+  if (monk2dSelf && a) {
+    const loop = (a === 'woodfish' || a === 'beads' || a === 'pet');
+    monk2dSelf.play(a, { repeat: loop ? 3 : 1, loop });
+  }
+  if (id === 'pet' && cat2d) cat2d.play('pet');
+  doAction(id);   // 功德 / 音效 / 服务端特效（烟火、灯光）照常
 }
 function openFocus(kind) {
   clearHover();
@@ -2836,13 +2860,18 @@ function addPeer(m) {
   const mk = buildMonk(tint); mk.group.position.set(m.x, 0, m.z);
   mk.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
   scene.add(mk.group);
+  // 2.5D 同修：覆盖在该玩家 3D 小沙弥之上，隐藏几何体
+  const pm = new Monk2D({ robe: tint, robeShade: '#697871', skin: '#F0D9C0', sash: '#B0492F' });
+  pm.group.position.set(m.x, 0, m.z); scene.add(pm.group);
+  mk.group.visible = false;
   const label = document.createElement('div'); label.className = 'pname'; label.textContent = m.name || '香客'; el.labels.appendChild(label);
   // 点同修法号牌 = 合十行礼并发出同坐邀请（不弹窗、不抢镜头）
   label.addEventListener('click', (e) => { e.stopPropagation(); startGreet(m.id); });
   peers[m.id] = {
     group: mk.group, bowPivot: mk.bowPivot, lower: mk.lower, knees: mk.knees,
     hands: mk.hands, eyes: mk.eyes, rig: mk.rig, target: new THREE.Vector3(m.x, 0, m.z),
-    pose: 'idle', poseT: 0, kneel: m.pose === 'bow', kneelT: 0, name: m.name, label
+    pose: 'idle', poseT: 0, kneel: m.pose === 'bow', kneelT: 0, name: m.name, label,
+    monk2d: pm
   };
   addCoName(m.name);
 }
@@ -3112,6 +3141,11 @@ function update(dt) {
   const hkSelf = Math.max(ckSelf, bkSelf, greetK(greetAnim));
   hands.visible = hkSelf > 0.02;
   handsRigApply(hands, monkRig, hkSelf);
+  // 2.5D 小沙弥：行礼时播合掌（1.85s 覆盖）
+  if (monk2dSelf) {
+    if (greetAnim > 0.02 && monk2dSelf.action !== 'pray') monk2dSelf.play('pray');
+    else if (greetAnim <= 0.02 && monk2dSelf.action === 'pray') monk2dSelf.stop();
+  }
   for (const c of cushions) {
     const m = c.material || c.userData.clothMat;
     if (m) m.emissiveIntensity = (c === activeCushion) ? 0.75 * kneelT : 0;
@@ -3178,9 +3212,18 @@ function update(dt) {
     const hkP = Math.max(ckP, bkP, greetK(p.greetAnim || 0));
     p.hands.visible = hkP > 0.02;
     handsRigApply(p.hands, p.rig, hkP);
+    // 2.5D 同修：跟随位置 + 行礼演出
+    if (p.monk2d) {
+      p.monk2d.group.position.set(p.group.position.x, 0, p.group.position.z);
+      p.monk2d.update(dt, camera);
+      if (p.greetAnim > 0.02 && p.monk2d.action !== 'pray') p.monk2d.play('pray');
+    }
   }
 
   updateCatLife(dt); updateFlames(); updateLure(dt); updatePond(dt); updateLeafPiles(dt); updateMonkIdle();
+  // 2.5D 纸片角色：跟随 3D 本体坐标并逐帧重绘
+  if (monk2dSelf) { monk2dSelf.group.position.set(monkObj.position.x, 0, monkObj.position.z); monk2dSelf.update(dt, camera); }
+  if (cat2d) { cat2d.group.position.set(catObj.position.x, 0, catObj.position.z); cat2d.update(dt, camera); }
   updatePetals(dt); updateHearts(dt); updateIncenseSmoke(dt);
 
   if (hovered) {

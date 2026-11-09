@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>静照院 · 2.5D 角色验证</title>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+</script>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#b7bcb0;font-family:"Kaiti SC",serif}
+  #stage{position:fixed;inset:0}
+  .bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:92vw}
+  .bar button{font-family:inherit;font-size:14px;letter-spacing:2px;padding:9px 14px;border:1px solid rgba(120,96,58,.5);
+    background:rgba(239,230,209,.92);color:#2e3532;border-radius:4px;cursor:pointer}
+  .bar button:active{filter:brightness(.92)}
+  .hint{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:10;color:#3a403c;font-size:13px;letter-spacing:2px;background:rgba(239,230,209,.7);padding:4px 12px;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div class="hint">2.5D 纸片小沙弥 + 橘猫 · 点按钮看动作</div>
+<div class="bar">
+  <button data-a="idle">静立</button>
+  <button data-a="pray">合掌</button>
+  <button data-a="bow">跪拜</button>
+  <button data-a="woodfish">木鱼</button>
+  <button data-a="beads">念珠</button>
+  <button data-a="lamp">点灯</button>
+  <button data-a="incense">上香</button>
+  <button data-a="pet">撸猫</button>
+</div>
+<script type="module" src="demo2d.js"></script>
+</body>
+</html>
