@@ -6,3 +6,4 @@ _versions/
 __pycache__/
 *.pyc
 previews/
+data/

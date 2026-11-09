@@ -51,12 +51,19 @@ function preloadGLB() {
   let loader;
   try { loader = new GLTFLoader(); } catch (e) { return Promise.resolve(); }
   // ?nocourt=1 强制走旧的程序化占位几何，用于 A/B 对比与一键回退
-  const glbNames = ['monk', 'cushion', 'toad', 'buddha'];
+  const glbNames = ['monk', 'cushion', 'toad', 'buddha', 'koi', 'coin', 'toad_v2', 'cat_v2'];
   if (!location.search.includes('nocourt')) glbNames.push('court');
   const jobs = glbNames.map((n) =>
     loader.loadAsync('assets/models/' + n + '.glb')
       .then((g) => { GLB_CACHE[n] = g.scene; })
       .catch(() => {}));
+  // 和尚 v2（连续曲面袍身 + 袖臂链 + 扁平双掌）：存在即覆盖 v1；
+  // 加载失败自动沿用旧 monk.glb，?oldmonk=1 可一键 A/B 回退。
+  if (!location.search.includes('oldmonk')) {
+    jobs.push(loader.loadAsync('assets/models/monk_v2.glb')
+      .then((g) => { GLB_CACHE.monk = g.scene; })
+      .catch(() => {}));
+  }
   return Promise.all(jobs);
 }
 const toonMatCache = {};
@@ -73,29 +80,39 @@ const GLB_MATS = {
   sash: () => toonMat(0xd8c08a),
   bead: () => toonMat(0x8f4d2d),
   rope: () => toonMat(0x6b4a2a),
-  goldtrim: () => new THREE.MeshStandardMaterial({ color: 0xb9965a, roughness: 0.5, metalness: 0.4 }),
+  // v3 宪章：旧金只作勾边/包浆，明度 ≤ #C9B07A，roughness ≥ 0.42、metalness ≤ 0.35。
+  // 旧值（gold .36/.62、goldLight .3/.7、urnaGold .35/.6）是「塑料鎏金」的直接来源，全部重标定。
+  goldtrim: () => new THREE.MeshStandardMaterial({ color: 0xB49A68, roughness: 0.58, metalness: 0.25 }),
   hi: () => new THREE.MeshBasicMaterial({ color: 0xffffff }),
-  blush: () => new THREE.MeshBasicMaterial({ color: 0xe99a92, transparent: true, opacity: 0.6, depthWrite: false }),
+  blush: () => new THREE.MeshBasicMaterial({ color: 0xc98c82, transparent: true, opacity: 0.28, depthWrite: false }),
   band: () => new THREE.MeshStandardMaterial({ color: 0xb1a17d, roughness: 0.85 }),
   stitch: () => new THREE.MeshStandardMaterial({ color: 0xa89468, roughness: 0.9 }),
-  gold: () => new THREE.MeshStandardMaterial({ color: 0xd8a94c, roughness: 0.36, metalness: 0.62 }),
-  goldDark: () => new THREE.MeshStandardMaterial({ color: 0xa87c30, roughness: 0.44, metalness: 0.55 }),
-  goldLight: () => new THREE.MeshStandardMaterial({ color: 0xefd08a, roughness: 0.3, metalness: 0.7 }),
-  buddhaGold: () => new THREE.MeshStandardMaterial({ color: 0xd9b36a, roughness: 0.5, metalness: 0.25 }),
-  buddhaRobe: () => new THREE.MeshStandardMaterial({ color: 0xb0762f, roughness: 0.7 }),
-  lotusGold: () => new THREE.MeshStandardMaterial({ color: 0xc9a25c, roughness: 0.5, metalness: 0.35 }),
-  // v3 参考图模型新增材质：白瓷佛身 / 佛墨线 / 白毫金 / 袍摆白衬边 / 拜垫布面
+  gold: () => new THREE.MeshStandardMaterial({ color: 0xB49A68, roughness: 0.62, metalness: 0.28 }),
+  goldDark: () => new THREE.MeshStandardMaterial({ color: 0x8C7448, roughness: 0.72, metalness: 0.20 }),
+  goldLight: () => new THREE.MeshStandardMaterial({ color: 0xC9B07A, roughness: 0.55, metalness: 0.30 }),
+  buddhaGold: () => new THREE.MeshStandardMaterial({ color: 0xB9A375, roughness: 0.62, metalness: 0.20 }),
+  buddhaRobe: () => new THREE.MeshStandardMaterial({ color: 0xA8916C, roughness: 0.82 }),
+  lotusGold: () => new THREE.MeshStandardMaterial({ color: 0xB49A68, roughness: 0.62, metalness: 0.24 }),
+  // v3 参考图模型材质：白瓷佛身 / 佛墨线 / 白毫金 / 袍摆白衬边 / 拜垫布面
   cloth: () => new THREE.MeshStandardMaterial({ color: 0xdfe6e8, roughness: 0.96 }),
   trim: () => new THREE.MeshStandardMaterial({ color: 0xf2ead8, roughness: 0.9 }),
-  buddhaSkin: () => new THREE.MeshStandardMaterial({ color: 0xf3efe6, roughness: 0.5 }),
+  buddhaSkin: () => new THREE.MeshStandardMaterial({ color: 0xf3efe6, roughness: 0.85 }),
   buddhaInk: () => toonMat(0x4a3a28),
-  urnaGold: () => new THREE.MeshStandardMaterial({ color: 0xe8c87a, roughness: 0.35, metalness: 0.6 }),
-  stone: () => new THREE.MeshStandardMaterial({ map: Tex.tile('stone.png', 1, 1), color: 0x8f9290, roughness: 0.98 })
+  urnaGold: () => new THREE.MeshStandardMaterial({ color: 0xC9B07A, roughness: 0.55, metalness: 0.28 }),
+  // 金蟾脚下的池心石：原来依赖 stone.png 贴图，贴图未就绪时会渲染成突兀的纯黑圆盘；
+  // v3 改用不依赖外部贴图的低饱和青灰哑光石。
+  stone: () => new THREE.MeshStandardMaterial({ color: 0x8A9186, roughness: 0.95 })
 };
 function findNode(root, name) {
   let r = null;
   root.traverse((o) => { if (!r && o.name === name) r = o; });
   return r;
+}
+// 取 GLB 里第一份 mesh geometry，供 InstancedMesh / 飞行币复用（保持与建模同源）
+function firstMeshGeometry(root) {
+  let g = null;
+  if (root) root.traverse((o) => { if (!g && o.isMesh && o.geometry) g = o.geometry; });
+  return g;
 }
 // 合十动画骨架：记录双手「家位」（GLB 内已合于胸前的姿）与袖臂静息角。
 // 播放时双手从袖口翻起、逐渐合于胸前，两条袖臂同步向中线抬起——
@@ -105,32 +122,36 @@ function makeHandsRig(hands, sleeves) {
   return {
     home: hands ? { pos: hands.position.clone(), rot: hands.rotation.clone(), scale: hands.scale.clone() } : null,
     rest: sl.map((s) => s.rotation.z),
+    restX: sl.map((s) => s.rotation.x),
     sleeves: sl
   };
 }
 function handsRigApply(h, rig, k) {
   if (!h || !rig || !rig.home) return;
   const e = k * k * (3 - 2 * k);   // smoothstep：起步慢、合拢快
-  // GLB 里双手的家位在袍身内侧（胸口 z≈0.52 < 袍面 z≈0.62），
-  // 合十时要把整组手「向前穿出袍面 + 微微上抬」，才看得见捧珠合十
+  // 和尚 v2：双掌家位已在袍面之外（不再藏在袍内），sleeveL/R 是袖臂的 pivot Group。
+  // 合十 = 整条袖臂绕肩向中线抬起 + 双掌小幅上抬前送，不再做「手穿袍」的硬位移。
   h.position.set(
     rig.home.pos.x,
-    rig.home.pos.y + 0.06 * e - 0.30 * (1 - e),
-    rig.home.pos.z + 0.24 * e + 0.02 * (1 - e)
+    rig.home.pos.y + 0.045 * e,
+    rig.home.pos.z + 0.035 * e
   );
-  h.rotation.set(rig.home.rot.x - 0.12 * e + 0.5 * (1 - e), rig.home.rot.y, rig.home.rot.z);
-  const s = 1 + 0.14 * e;
+  h.rotation.set(rig.home.rot.x - 0.06 * e, rig.home.rot.y, rig.home.rot.z);
+  const s = 1 + 0.05 * e;
   h.scale.set(rig.home.scale.x * s, rig.home.scale.y * s, rig.home.scale.z * s);
   rig.sleeves.forEach((sl, i) => {
-    const sgn = i === 0 ? 1 : -1;   // 左袖向右、右袖向左，袖口向中线合拢抬起
-    sl.rotation.z = rig.rest[i] + sgn * 0.35 * e;
-    sl.rotation.x = 0.32 * e;       // 袖口向前上方翻，像手臂正在抬起来
+    const sgn = i === 0 ? 1 : -1;   // 左袖向右、右袖向左，整条袖臂向中线合拢
+    sl.rotation.z = rig.rest[i] + sgn * 0.50 * e;
+    sl.rotation.x = (rig.restX ? rig.restX[i] : 0) + 0.42 * e;
   });
 }
 function applyGameMaterials(root, tint) {
   root.traverse((o) => {
     if (!o.isMesh || !o.material) return;
     const name = Array.isArray(o.material) ? o.material[0].name : o.material.name;
+    // v3 重建模型自带烘焙 albedo/normal/AO，材质名统一 v3_* 前缀；
+    // 这里绝不能按语义名覆盖成纯色，否则贴图被丢掉，重建等于白做。
+    if (typeof name === 'string' && name.indexOf('v3_') === 0) return;
     const f = GLB_MATS[name];
     if (f) o.material = f(tint);
   });
@@ -149,6 +170,25 @@ const CONFIG = {
   NAME_KEY: 'zen-court-name-v1',
   CAT_MAX: 9999
 };
+// ---- 同修社交：预设短句（服务端只传索引，天然零 UGC / 零审核依赖） ----
+const CHAT_LINES = [
+  '此刻风很好', '一起听会儿钟', '这池水真静', '愿你心安',
+  '同坐片刻', '今日月色不错', '且共一炷香', '慢慢来，不急',
+  '随喜', '山门深处有松声', '我在此处，不必回', '合十'
+];
+const GREET_DUR = 1.85;   // 完整行礼：起手 .55 → 定住 .35 → 微躬 .45 → 收手回落 .5
+let greetAnim = 0, chatPeerId = null, selfBubble = null;
+const bubbleTimers = {};
+function greetK(remain) {
+  if (remain <= 0) return 0;
+  const t = GREET_DUR - remain;
+  if (t < 0.55) return t / 0.55;
+  if (t < 0.90) return 1;
+  if (t < 1.35) return 1 - (t - 0.90) / 0.45 * 0.12;
+  return Math.max(0, (GREET_DUR - t) / 0.5);   // 收手回落，手不再「弹」回去
+}
+function playGreet() { greetAnim = GREET_DUR; }
+
 const META = {
   clasp:   { name: '合掌',   verb: '合十',     gain: 1 },
   bow:     { name: '拜垫',   verb: '拜一拜',   gain: 2 },
@@ -196,7 +236,9 @@ function clampWalk(x, z) {
 }
 const CAPACITY = 50;   // 与服务端 MAX_PLAYERS 一致，仅用于 HUD 文案
 // 同修统一蓝色系僧袍（参考大慈寺「圆一」与宝光寺萌和尚的灰蓝僧衣）
-const ROBE_BLUES = [0x4f7aa6, 0x5b87b2, 0x446a91, 0x6a92b6, 0x3e6289, 0x7a9dbe, 0x527ba0, 0x466f9a];
+// v3：从高饱和钴蓝收敛到「宣纸米 / 墨青 / 朱砂 / 旧金」体系内的雾青灰（jade 派生），
+// 同修之间只做明度差，不新增色相；与准写实大殿同频。
+const ROBE_BLUES = [0x788B80, 0x6C7F75, 0x84968B, 0x5F7168, 0x7E9086, 0x6B7E74, 0x8B9C92, 0x71847A];
 const NAME_KEY = CONFIG.NAME_KEY;
 
 // ===================== 存储 / 计时 =====================
@@ -217,32 +259,49 @@ function localLamp() {
   return null;
 }
 function saveLocalLamp(l) { save.lampDate = l.date || localDateStr(); save.lampWish = l.wish; persist(); }
-// 荷池投币：每日三枚，跨天自动重置
-// 抛币不限次数：coinCount 只记「今日已投」枚数，用来在池底铺出硬币堆（跨天清零重铺）
-function coinToday() {
-  if (save.coinDate !== localDateStr()) { save.coinDate = localDateStr(); save.coinCount = 0; persist(); }
-  return save.coinCount;
+// ---- 荷池投币：真实许愿池语义，数据不清理 --------------------------------
+// 服务端 pond-coins.json 是权威；前端只负责把最近 500 枚画成 InstancedMesh。
+// 旧实现的四处「清理」全部移除：跨天清零 / 上限 18 / 每枚 new+dispose / 落定后删除。
+let pondCoinData = [], pondCoinTotal = 0, pondCoinMesh = null;
+const POND_COIN_COLORS = [0xB49A68, 0x8C7448, 0xA8916C, 0x788B80]; // 旧金 → 暗铜 → 铜锈
+function coinToday() { return pondCoinTotal; }   // 兼容旧调用，不再跨天清零
+function addLocalCoin(dx, dz, rot) {
+  pondCoinData.push({ x: dx, z: dz, rot: rot || Math.random() * 6.28, variant: (Math.random() * 4) | 0 });
+  if (pondCoinData.length > 500) pondCoinData.shift();
+  pondCoinTotal += 1;
+  refreshPondCoins();
 }
-function addCoin() {
-  coinToday(); save.coinCount += 1; persist(); refreshPondCoins();
+function addCoin(x, z) {
+  const dx = clamp(x - POND.x, -2.1, 2.1), dz = clamp(z - POND.z, -1.9, 1.9);
+  // 在线时由服务端权威记录并广播给全院；离线时本地兜底，刷新后以服务端为准。
+  if (Net && Net.coinDrop && myId !== null) Net.coinDrop(dx, dz);
+  else addLocalCoin(dx, dz);
 }
-// 池底硬币：有人扔过才看得见，按当日累计枚数铺在池底（跨天清零即消失）
 function refreshPondCoins() {
   if (!pondCoinsGroup || !scene) return;
-  for (let k = pondCoinsGroup.children.length - 1; k >= 0; k--) {
-    const c = pondCoinsGroup.children[k];
-    pondCoinsGroup.remove(c); c.geometry.dispose(); c.material.dispose();
+  if (!pondCoinMesh) {
+    // 真·方孔铜钱几何（coin.glb），不再是实心金色圆柱
+    const geo = firstMeshGeometry(GLB_CACHE.coin) || new THREE.CylinderGeometry(0.105, 0.105, 0.024, 16);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62, metalness: 0.28 });
+    pondCoinMesh = new THREE.InstancedMesh(geo, mat, 500);
+    pondCoinMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    pondCoinMesh.raycast = () => {};
+    pondCoinMesh.castShadow = false;
+    pondCoinsGroup.add(pondCoinMesh);
   }
-  const n = Math.min(save.coinCount, 18);
+  const n = Math.min(pondCoinData.length, 500);
+  const dummy = new THREE.Object3D();
   for (let i = 0; i < n; i++) {
-    const a = i * 2.399 + 1.1, r = 0.35 + (i % 4) * 0.28;
-    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 14),
-      new THREE.MeshStandardMaterial({ color: 0xd8b45c, roughness: 0.4, metalness: 0.7 }));
-    c.rotation.set((i % 3 - 1) * 0.12, i * 0.7, (i % 2) * 0.1);
-    c.position.set(POND.x + Math.cos(a) * r, 0.045, POND.z + Math.sin(a) * r * 0.8);
-    c.raycast = () => {};
-    pondCoinsGroup.add(c);
+    const c = pondCoinData[i];
+    dummy.position.set(POND.x + c.x, 0.030 + (i % 3) * 0.0015, POND.z + c.z);
+    dummy.rotation.set((i % 5 - 2) * 0.055, c.rot || i * 0.7, (i % 4 - 2) * 0.045);
+    dummy.updateMatrix();
+    pondCoinMesh.setMatrixAt(i, dummy.matrix);
+    pondCoinMesh.setColorAt(i, new THREE.Color(POND_COIN_COLORS[(c.variant || 0) % 4]));
   }
+  pondCoinMesh.count = n;
+  pondCoinMesh.instanceMatrix.needsUpdate = true;
+  if (pondCoinMesh.instanceColor) pondCoinMesh.instanceColor.needsUpdate = true;
 }
 
 let sessionSeconds = 0;
@@ -379,7 +438,7 @@ let activeCushion = null;
 // 生态：猫的可动部件与状态机、烛火/池水/小鱼/逗猫光点、愿签
 let catParts = null, catLife = null, monkEyes = null, monkHead = null;
 let toadObj = null, toadParts = null;
-let flames = [], pondRings = [], pondFish = null, lure = null, wishTags = [], coinFx = [];
+let flames = [], pondRings = [], pondFish = null, lure = null, wishTags = [], coinFx = [], koiSchool = [];
 // 每日愿灯（服务端按法号+日期权威限制）
 let todayLamps = [], myLamp = null, lampBusy = false, lampTimeout = null;
 const peers = {};
@@ -571,8 +630,7 @@ function buildMonk(tint) {
     const knees = [findNode(group, 'kneeL'), findNode(group, 'kneeR')];
     // 部件完整性校验：GLB 里缺任何一个动画节点就整体回退程序化建模
     if (lower && bowPivot && hands && head && robe && eyes.every((e) => e.ball && e.hi) && knees.every(Boolean)) {
-      if (robe) inkOutline(robe, 1.045);
-      if (head) inkOutline(head, 1.04);
+      // v3 宪章：取消全身等宽黑描边（inkOutline），否则新模型的衣纹/掌形会被压成卡通。
       hands.visible = false;
       knees.forEach((k) => { k.visible = false; });
       return { group, lower, bowPivot, hands, head, eyes, knees, rig: makeHandsRig(hands, sleeves) };
@@ -665,6 +723,37 @@ function buildMonkProcedural(tint) {
 
 // ===================== 寺猫（圆润、可动部件齐全，供生态行为驱动） =====================
 function buildCat() {
+  // v2：连续曲面躯干 + 有厚度耳廓 + 锥形尾，取代 40 个相切球堆出来的简笔猫
+  if (GLB_CACHE.cat_v2) {
+    const cg = GLB_CACHE.cat_v2.clone(true);
+    const parts = {
+      body: findNode(cg, 'body'), belly: findNode(cg, 'belly'), head: findNode(cg, 'head'),
+      tailPivot: findNode(cg, 'tailPivot'), nose: findNode(cg, 'nose'),
+      ears: [findNode(cg, 'earL'), findNode(cg, 'earR')],
+      eyes: [findNode(cg, 'eyeL'), findNode(cg, 'eyeR')],
+      paws: [findNode(cg, 'pawL'), findNode(cg, 'pawR')],
+      hind: [findNode(cg, 'hindL'), findNode(cg, 'hindR')]
+    };
+    if (parts.body && parts.head && parts.tailPivot &&
+        parts.ears.every(Boolean) && parts.eyes.every(Boolean) && parts.paws.every(Boolean)) {
+      cg.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.4, 1.2),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+      hit.position.set(0.15, 0.7, 0); cg.add(hit);
+      // 记录 GLB 基准变换：updateCatLife 原来用绝对值摆姿态，会把新模型拆散；
+      // v2 一律走「基准 + 增量」，只做相对幅度。
+      [parts.body, parts.belly, parts.head, parts.tailPivot, parts.nose]
+        .concat(parts.ears, parts.eyes, parts.paws, parts.hind)
+        .forEach(o => {
+          if (!o) return;
+          o.userData.basePos = o.position.clone();
+          o.userData.baseScale = o.scale.clone();
+          o.userData.baseRot = o.rotation.clone();
+        });
+      parts.v2 = true;
+      return { group: cg, parts };
+    }
+  }
   const g = new THREE.Group();
   const toon = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: toonGradient() });
   // 布偶猫配色（对齐撸猫面板与理想参考图）：奶油底色 + 深棕重点色（耳/背/尾）
@@ -890,9 +979,12 @@ function buildStatue(def) {
 // ===================== 荷池金蟾（三足 · 口衔铜钱 · 背驮七星） =====================
 // 主路径用 Blender 建模的 toad.glb（named: toadBody/toadEyeL/toadEyeR/grpCoin），失败回退程序化版。
 function buildToad() {
-  if (GLB_CACHE.toad) {
-    const g = GLB_CACHE.toad.clone(true);
-    applyGameMaterials(g);
+  // v2：一体曲面泥胎金蟾（癞瘤/三足/方孔钱），自带 v3_* 材质，不能被纯色覆盖
+  const useV2 = !!GLB_CACHE.toad_v2;
+  const src = useV2 ? GLB_CACHE.toad_v2 : GLB_CACHE.toad;
+  if (src) {
+    const g = src.clone(true);
+    if (!useV2) applyGameMaterials(g);
     const parts = {
       body: findNode(g, 'toadBody'),
       head: findNode(g, 'toadHead'),
@@ -1181,7 +1273,7 @@ const COURT_PALETTE = {
   courtTile: 0x3C4541, courtTileLight: 0x51605A,
   courtGold: 0xB49A68, courtGoldDark: 0x8C7448,
   courtPine: 0x4A5C4E, courtPineLight: 0x66795F, courtPineDark: 0x39483D,
-  courtTrunk: 0x5A4638, courtGinkgo: 0xB49A68, courtGinkgoLt: 0xC9B27E
+  courtTrunk: 0x5A4638, courtGinkgo: 0xB49A68, courtGinkgoLt: 0xC9B07A
 };
 function applyCourtMaterials(root) {
   const bump = makeBumpTexture(); bump.repeat.set(9, 9);
@@ -1527,42 +1619,66 @@ function buildScene() {
   const pondRim = new THREE.Mesh(new THREE.TorusGeometry(POND.r + 0.04, 0.19, 8, 40), stone);
   pondRim.rotation.x = -Math.PI / 2; pondRim.position.set(POND.x, 0.07, POND.z); scene.add(pondRim);
   }
-  const pondBed = new THREE.Mesh(new THREE.CircleGeometry(POND.r + 0.06, 40),
-    new THREE.MeshStandardMaterial({ color: 0x4a5f58, roughness: 1 }));
-  pondBed.rotation.x = -Math.PI / 2; pondBed.position.set(POND.x, 0.012, POND.z); scene.add(pondBed);
-  const pond = new THREE.Mesh(new THREE.CircleGeometry(POND.r, 44),
-    new THREE.MeshStandardMaterial({ color: 0x6e9fa8, roughness: 0.16, metalness: 0.2, transparent: true, opacity: 0.88 }));
-  pond.rotation.x = -Math.PI / 2; pond.position.set(POND.x, 0.035, POND.z); scene.add(pond);
+  // v3 y 层次（建模专家 v1.2 定案）：不挖洞、不下沉到负值、不动 court.glb。
+  // 不透明池底盖住 ground 的 stone.png 平铺缝；水面 0.105 低于 court 池沿 0.15。
+  const pondBed = new THREE.Mesh(new THREE.CircleGeometry(POND.r + 0.06, 48),
+    new THREE.MeshStandardMaterial({ color: 0x7C8579, roughness: 0.96, bumpMap: makeBumpTexture(), bumpScale: 0.02 }));
+  pondBed.rotation.x = -Math.PI / 2; pondBed.position.set(POND.x, 0.015, POND.z);
+  pondBed.raycast = () => {}; pondBed.renderOrder = 0; scene.add(pondBed);
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(POND.r, 48),
+    new THREE.MeshStandardMaterial({ color: 0x8A9A90, roughness: 0.42, metalness: 0,
+      transparent: true, opacity: 0.72, depthWrite: false, side: THREE.DoubleSide,
+      bumpMap: makeBumpTexture(), bumpScale: 0.012 }));
+  pond.rotation.x = -Math.PI / 2; pond.position.set(POND.x, 0.105, POND.z);
+  pond.raycast = () => {}; pond.renderOrder = 2; scene.add(pond);
   for (let i = 0; i < 7; i++) {
     const a = i * 2.4, r = 0.75 + (i % 3) * 0.5;
     const leaf = new THREE.Mesh(new THREE.CircleGeometry(0.3 + (i % 2) * 0.1, 16),
-      new THREE.MeshStandardMaterial({ color: i % 2 ? 0x6d9169 : 0x87a875, roughness: 0.9, side: THREE.DoubleSide }));
+      new THREE.MeshStandardMaterial({ color: i % 2 ? 0x6B7C68 : 0x84917A, roughness: 0.9, side: THREE.DoubleSide }));
     leaf.rotation.x = -Math.PI / 2; leaf.rotation.z = a;
-    leaf.position.set(POND.x + Math.cos(a) * r, 0.05, POND.z + Math.sin(a) * r); scene.add(leaf);
+    leaf.position.set(POND.x + Math.cos(a) * r, 0.125, POND.z + Math.sin(a) * r);
+    leaf.raycast = () => {}; leaf.renderOrder = 3; scene.add(leaf);
   }
   for (let i = 0; i < 3; i++) {
-    const r = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.0, 40), new THREE.MeshBasicMaterial({ color: 0xd9f0f6, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
-    r.rotation.x = -Math.PI / 2; r.position.set(POND.x, 0.06, POND.z); r.scale.setScalar(0.2); scene.add(r);
+    const r = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.0, 40),
+      new THREE.MeshBasicMaterial({ color: 0x8A9A90, transparent: true, opacity: 0,
+        side: THREE.DoubleSide, depthWrite: false }));
+    r.rotation.x = -Math.PI / 2; r.position.set(POND.x, 0.13, POND.z);
+    r.scale.setScalar(0.2); r.renderOrder = 4; scene.add(r);
     pondRings.push({ mesh: r, t: i * 1.7 });
   }
-  pondFish = new THREE.Group();
-  const fishBody = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshToonMaterial({ color: 0xe8904c, gradientMap: toonGradient() }));
-  fishBody.scale.set(1.5, 0.7, 0.7); pondFish.add(fishBody);
-  const fishTail = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.24, 4), new THREE.MeshToonMaterial({ color: 0xd87a3c, gradientMap: toonGradient() }));
-  fishTail.rotation.z = Math.PI / 2; fishTail.position.x = -0.28; pondFish.add(fishTail);
-  pondFish.position.set(POND.x, -0.6, POND.z); scene.add(pondFish);
+  // 锦鲤群：真实曲面模型，常驻水下缓慢巡游（取代原来每 7.5s 从地下弹出一次的橙椭球）
+  if (GLB_CACHE.koi) {
+    for (let i = 0; i < 5; i++) {
+      const k = GLB_CACHE.koi.clone(true);
+      k.scale.setScalar(0.72 + Math.random() * 0.42);
+      k.traverse(o => { if (o.isMesh) { o.raycast = () => {}; o.castShadow = false; } });
+      k.userData = {
+        phase: Math.random() * 6.28, radius: 0.75 + Math.random() * 0.95,
+        speed: 0.22 + Math.random() * 0.16, y: 0.052 + Math.random() * 0.028
+      };
+      k.renderOrder = 1; scene.add(k); koiSchool.push(k);
+    }
+  } else {
+    // 无 GLB 时保留旧的跃出彩蛋作为回退
+    pondFish = new THREE.Group();
+    const fb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), toonMat(0x9a8a72));
+    fb.scale.set(1.5, 0.7, 0.7); pondFish.add(fb);
+    pondFish.position.set(POND.x, -0.6, POND.z); scene.add(pondFish);
+  }
 
-  // 池底硬币组：按存档当日累计枚数铺设（扔过才有）
-  pondCoinsGroup = new THREE.Group(); scene.add(pondCoinsGroup);
+  // 池底硬币组：服务端权威下发的全院累积，InstancedMesh 承载
+  pondCoinsGroup = new THREE.Group(); pondCoinsGroup.renderOrder = 1;
+  scene.add(pondCoinsGroup);
   refreshPondCoins();
 
-  // 金蟾：蹲在池心露出水面的石上，口衔铜钱、背驮七星；点它就能抛硬币
+  // 金蟾：按 1 号定稿图摆到池心对称正中、不再歪着；石座略抬以露出水面
   const toad = buildToad();
-  toad.group.position.set(POND.x, 0.02, POND.z - 0.55);
-  toad.group.rotation.y = 0.1;
+  toad.group.position.set(POND.x, 0.09, POND.z);
+  toad.group.rotation.y = 0;
   toad.group.userData = {
     action: 'coin', label: '荷池金蟾 · 抛一枚硬币',
-    ringPos: new THREE.Vector3(POND.x, 0.03, POND.z - 0.55),
+    ringPos: new THREE.Vector3(POND.x, 0.10, POND.z),
     spot: new THREE.Vector3(POND.spot.x, 0, POND.spot.z)
   };
   scene.add(toad.group); toadObj = toad.group; toadParts = toad.parts;
@@ -1843,18 +1959,37 @@ function updateCatLife(dt) {
     earTwitch = 0.45; eyeSY = 1; jumpY = Math.max(0, Math.sin(L.startleT * 6)) * 0.22; tailRot = 0.9;
   }
 
-  P.body.scale.set(bodySX, bodySY * (1 + breathe * 0.012), 0.9);
-  P.body.position.y = bodyY;
-  P.head.position.y = headY;
-  P.head.rotation.z = headRotZ;
-  P.head.rotation.y = headYaw + (s === 'stroll' ? Math.sin(time * 1.4 + L.phase) * 0.16 : 0);
-  P.tailPivot.rotation.x = tailRot;
-  P.ears.forEach((e, i) => { e.rotation.z = -0.16 + earTwitch * (i ? 1 : -1); });
-  P.eyes.forEach(e => { e.scale.y = eyeSY; });
-  P.paws.forEach((p, i) => {
-    p.position.y = 0.12 + pawLift + (walking ? Math.max(0, Math.sin(time * 11 + i * Math.PI)) * 0.09 : 0);
-    p.position.x = 0.62 + pawFwd;
-  });
+  if (P.v2) {
+    // 新 GLB：只叠加相对幅度，不重写绝对坐标（保留连续曲面躯干与各部件的相对位置）
+    const b0 = P.body.userData, h0 = P.head.userData, t0 = P.tailPivot.userData;
+    P.body.scale.set(b0.baseScale.x * (bodySX / 1.25),
+      b0.baseScale.y * (bodySY / 0.85) * (1 + breathe * 0.012), b0.baseScale.z);
+    P.body.position.y = b0.basePos.y + (bodyY - 0.5) * 0.20;
+    P.head.position.y = h0.basePos.y + (headY - 0.78) * 0.22;
+    P.head.rotation.z = h0.baseRot.z + headRotZ * 0.5;
+    P.head.rotation.y = h0.baseRot.y + headYaw * 0.5 +
+      (s === 'stroll' ? Math.sin(time * 1.4 + L.phase) * 0.10 : 0);
+    P.tailPivot.rotation.x = t0.baseRot.x + tailRot * 0.45;
+    P.ears.forEach((e, i) => { e.rotation.z = e.userData.baseRot.z + earTwitch * (i ? 0.25 : -0.25); });
+    P.eyes.forEach(e => { e.scale.y = e.userData.baseScale.y * eyeSY; });
+    P.paws.forEach((p, i) => {
+      p.position.y = p.userData.basePos.y + pawLift * 0.35 +
+        (walking ? Math.max(0, Math.sin(time * 11 + i * Math.PI)) * 0.05 : 0);
+    });
+  } else {
+    P.body.scale.set(bodySX, bodySY * (1 + breathe * 0.012), 0.9);
+    P.body.position.y = bodyY;
+    P.head.position.y = headY;
+    P.head.rotation.z = headRotZ;
+    P.head.rotation.y = headYaw + (s === 'stroll' ? Math.sin(time * 1.4 + L.phase) * 0.16 : 0);
+    P.tailPivot.rotation.x = tailRot;
+    P.ears.forEach((e, i) => { e.rotation.z = -0.16 + earTwitch * (i ? 1 : -1); });
+    P.eyes.forEach(e => { e.scale.y = eyeSY; });
+    P.paws.forEach((p, i) => {
+      p.position.y = 0.12 + pawLift + (walking ? Math.max(0, Math.sin(time * 11 + i * Math.PI)) * 0.09 : 0);
+      p.position.x = 0.62 + pawFwd;
+    });
+  }
   catObj.position.y = jumpY;
   if (hovered === catObj && hoverRing) hoverRing.position.set(catObj.position.x, 0.04, catObj.position.z);
 }
@@ -1883,25 +2018,50 @@ function updatePond(dt) {
   for (const r of pondRings) {
     r.t += dt; const k = (r.t % 5.1) / 5.1;
     r.mesh.scale.setScalar(0.25 + k * 2.4);
-    r.mesh.material.opacity = Math.max(0, 0.34 * (1 - k));
+    r.mesh.material.opacity = Math.max(0, 0.16 * (1 - k));
   }
-  if (pondFish) {
+  // 锦鲤：水下缓慢 S 形巡游 + 尾鳍摆动（取代「每 7.5 秒从地下弹出一次的橙椭球」）
+  for (const k of koiSchool) {
+    const a = time * k.userData.speed + k.userData.phase;
+    const rr = k.userData.radius;
+    k.position.set(POND.x + Math.cos(a) * rr,
+      k.userData.y + Math.sin(a * 2.2) * 0.010,
+      POND.z + Math.sin(a) * rr * 0.70);
+    k.rotation.y = -a + Math.PI / 2;
+    k.rotation.z = Math.sin(a * 3) * 0.055;
+    const tail = k.getObjectByName('koiTail');
+    if (tail) tail.rotation.y = Math.sin(a * 5.5) * 0.30;
+  }
+  if (pondFish && !koiSchool.length) {
     const k = time % 7.5;
     if (k < 0.95) {
       const p = k / 0.95;
       pondFish.visible = true;
-      pondFish.position.y = -0.6 + Math.sin(p * Math.PI) * 1.25;
+      pondFish.position.y = 0.05 + Math.sin(p * Math.PI) * 0.55;
       pondFish.position.x = POND.x + Math.sin(p * Math.PI) * 0.85;
       pondFish.rotation.z = -0.8 + p * 1.6;
-    } else { pondFish.visible = false; pondFish.rotation.z = 0; pondFish.position.set(POND.x, -0.6, POND.z); }
+    } else { pondFish.visible = false; pondFish.rotation.z = 0; pondFish.position.set(POND.x, 0.05, POND.z); }
   }
-  // 金蟾也在过日子：呼吸、偶尔眨眼、口中铜钱轻轻反光
+  // 金蟾：一律「记录 GLB 基准值 + 增量」。旧代码用绝对值 scale.set(1.2,0.82,1.02)
+  // 会把 Blender 里放样好的拱背强行压扁 18%，新模型重建后照样被压丑。
   if (toadObj && toadParts) {
-    toadParts.body.scale.set(1.2, 0.82 + Math.sin(time * 1.5) * 0.014, 1.02);
+    const b = toadParts.body;
+    if (b) {
+      if (!b.userData.baseScale) b.userData.baseScale = b.scale.clone();
+      const s = b.userData.baseScale;
+      b.scale.set(s.x, s.y * (1 + Math.sin(time * 1.5) * 0.012), s.z);
+    }
     const blink = (time % 5.7) < 0.12;
-    toadParts.eyes.forEach(e => { e.scale.y = blink ? 0.16 : 1.15; });
-    toadParts.coin.position.y = 0.7 + Math.sin(time * 1.1) * 0.006;
-    toadObj.rotation.y = 0.1 + Math.sin(time * 0.4) * 0.04;
+    toadParts.eyes.forEach(e => {
+      if (!e.userData.baseScaleY) e.userData.baseScaleY = e.scale.y || 1;
+      e.scale.y = e.userData.baseScaleY * (blink ? 0.16 : 1);
+    });
+    const c = toadParts.coin;
+    if (c) {
+      if (c.userData.baseY === undefined) c.userData.baseY = c.position.y;
+      c.position.y = c.userData.baseY + Math.sin(time * 1.1) * 0.005;
+    }
+    toadObj.rotation.y = Math.sin(time * 0.4) * 0.03;   // 基准 0：池心对称、不再歪着
   }
   updateCoinFx(dt);
 }
@@ -1909,7 +2069,8 @@ function updatePond(dt) {
 function pondSplash(x, z, gold) {
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.62, 40),
     new THREE.MeshBasicMaterial({ color: gold ? 0xffe1a0 : 0xd9f0f6, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
-  ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.075, z); ring.scale.setScalar(0.3);
+  ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.135, z); ring.scale.setScalar(0.3);
+  ring.renderOrder = 5;
   scene.add(ring); coinFx.push({ mesh: ring, kind: 'ring', t: 0, life: 1.8 });
   if (!gold) return;
   for (let i = 0; i < 12; i++) {
@@ -1921,13 +2082,15 @@ function pondSplash(x, z, gold) {
 }
 // 一枚真实下落的硬币：从水面上方坠入、沉到池底（水面半透明，全程可见），落定后并入池底硬币堆
 function pondCoinDrop(x, z, gold) {
-  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.026, 16),
-    new THREE.MeshStandardMaterial({ color: gold ? 0xf0cd74 : 0xd9b45c, roughness: 0.32, metalness: 0.78 }));
+  // v3：旧金哑光，不再用亮金 + 高 metalness 的「原型几何体」
+  const geo = firstMeshGeometry(GLB_CACHE.coin) || new THREE.CylinderGeometry(0.105, 0.105, 0.024, 16);
+  const c = new THREE.Mesh(geo,
+    new THREE.MeshStandardMaterial({ color: gold ? 0xC9B07A : 0xB49A68, roughness: 0.6, metalness: 0.28 }));
   c.position.set(x, 1.5, z);
   c.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
   c.raycast = () => {};
   scene.add(c);
-  coinFx.push({ mesh: c, kind: 'coin', t: 0, life: 2.4, vy: -0.4, landed: false, gold });
+  coinFx.push({ mesh: c, kind: 'coin', t: 0, life: 2.4, vy: -0.4, x: x, z: z, forceEnd: false });
 }
 function updateCoinFx(dt) {
   for (let i = coinFx.length - 1; i >= 0; i--) {
@@ -1937,29 +2100,21 @@ function updateCoinFx(dt) {
       f.mesh.scale.setScalar(0.3 + k * 2.7);
       f.mesh.material.opacity = 0.9 * (1 - k);
     } else if (f.kind === 'coin') {
-      // 真实坠币：旋转下落 → 穿过半透明水面 → 沉在池底发一会儿光 → 并入池底硬币堆
-      if (!f.landed) {
-        f.mesh.position.y += f.vy * dt; f.vy -= dt * 3.4;
-        f.mesh.rotation.x += dt * 8; f.mesh.rotation.z += dt * 6;
-        if (f.mesh.position.y <= 0.032) {
-          f.mesh.position.y = 0.032;
-          f.mesh.rotation.set((Math.random() - 0.5) * 0.25, Math.random() * 6.28, (Math.random() - 0.5) * 0.25);
-          f.landed = true;
-          f.mesh.material.emissive = new THREE.Color(f.gold ? 0xffd27a : 0x1d332f);
-          f.mesh.material.emissiveIntensity = f.gold ? 0.9 : 0.35;
-          f.life = f.t + 1.2;
-          refreshPondCoins();
-        }
-      } else {
-        const fade = Math.max(0, 1 - (f.t - (f.life - 1.2)) / 1.2);
-        f.mesh.material.emissiveIntensity = (f.gold ? 0.9 : 0.35) * fade;
+      // 真实坠币：旋转下落 → 穿过半透明水面 → 触底转为池底常驻实例，不再发光淡出、不再被删除
+      f.mesh.position.y += f.vy * dt; f.vy -= dt * 3.4;
+      f.mesh.rotation.x += dt * 8; f.mesh.rotation.z += dt * 6;
+      if (f.mesh.position.y <= 0.030) {
+        f.mesh.position.y = 0.030;
+        // 保留前一帧的旋转作为落定姿态，避免 rotation.set() 造成「瞬间跳成水平」的穿帮
+        addLocalCoin(f.x - POND.x, f.z - POND.z, f.mesh.rotation.y);
+        f.forceEnd = true;   // 交给 InstancedMesh，飞行用的临时 Mesh 本帧移除
       }
     } else {
       f.mesh.position.x += f.vx * dt; f.mesh.position.z += f.vz * dt;
       f.mesh.position.y += f.vy * dt; f.vy -= dt * 1.7;
       f.mesh.material.opacity = 0.9 * (1 - k);
     }
-    if (k >= 1) {
+    if (k >= 1 || f.forceEnd) {
       scene.remove(f.mesh);
       if (f.mesh.material) f.mesh.material.dispose();
       coinFx.splice(i, 1);
@@ -2322,9 +2477,19 @@ function renderFocusObj(kind) {
           '<span class="toad-star" style="left:50%;top:34%"></span>' +
           '<span class="toad-star" style="left:57%;top:30%"></span>' +
         '</div>' +
-        '<div class="coin-hint">点水面抛一枚硬币 · 投进金蟾口中，招财进宝</div>' +
+        '<div class="coin-hint">投一枚 · 落一枚 · 池底渐满</div>' +
       '</div>';
     box.appendChild(st);
+    // 打开面板时把全院日积月累的池底币一并画出来（刷新后仍看得见，不再清零）
+    const water = st.querySelector('#coinWater');
+    if (water) {
+      pondCoinData.slice(-40).forEach((c) => {
+        const sunk = document.createElement('div'); sunk.className = 'coin sunk-coin';
+        sunk.style.left = (50 + c.x / 2.1 * 40) + '%';
+        sunk.style.top = (48 + (c.z + 1.9) / 3.8 * 34) + '%';
+        water.appendChild(sunk);
+      });
+    }
     const hint = document.createElement('div'); hint.className = 'focus-hint'; hint.textContent = '心诚则灵 · 不限次数'; box.appendChild(hint);
     bindCoin();
   }
@@ -2351,12 +2516,13 @@ function openFocus(kind) {
   // 右上角工具按钮与「收起」位置重叠，打开聚焦界面时先藏起来，避免误触重置
   if (el.tools) el.tools.style.visibility = 'hidden';
   if (el.dock) el.dock.style.visibility = 'hidden';
-  if (kind === 'fish') el.focusCount.textContent = '第 0 敲';
-  else if (kind === 'beads') el.focusCount.textContent = '第 0 念';
+  // v3：面板只给状态与动作提示，不出现「第 N 敲 / 第 N 念 / 好感度 / 功德 +N」这类计数。
+  if (kind === 'fish') el.focusCount.textContent = '敲一敲 · 听一声';
+  else if (kind === 'beads') el.focusCount.textContent = '拨一拨 · 静一念';
   else if (kind === 'incense') el.focusCount.textContent = '点香筒，取一炷香';
-  else if (kind === 'lamp') el.focusCount.textContent = myLamp ? ('今日已点一盏 · ' + myLamp.wish) : '每人每日一盏长明灯';
-  else if (kind === 'coin') el.focusCount.textContent = '点水面抛硬币 · 投进金蟾口中，招财进宝';
-  else el.focusCount.textContent = '猫咪好感 ' + save.catAffection;
+  else if (kind === 'lamp') el.focusCount.textContent = myLamp ? ('愿 · ' + myLamp.wish) : '点一盏灯';
+  else if (kind === 'coin') el.focusCount.textContent = '点水面抛一枚硬币';
+  else el.focusCount.textContent = '轻轻顺毛';
   if (kind === 'pet') CatLife.pet();
   Sound.unlock();
   if (kind !== 'pet') Sound.chantStart();
@@ -2392,7 +2558,7 @@ function focusTap(dir) {
   }
   const rip = document.createElement('div'); rip.className = 'ripple'; obj.appendChild(rip);
   setTimeout(() => rip.remove(), 800);
-  el.focusCount.textContent = '第 ' + focusCount + (focusKind === 'fish' ? ' 敲' : ' 念');
+  el.focusCount.textContent = focusKind === 'fish' ? '一声一响 · 心自静' : '一珠一念 · 莫问数';
   save.totalMerit += 1; persist(); updateHUD(); Net.action(focusKind);
 }
 
@@ -2458,7 +2624,7 @@ function bindPet() {
     save.catAffection = Math.min(CONFIG.CAT_MAX, save.catAffection + 1);
     petCount += 1; petNetTick += 1;
     heart(x, y); Sound.tick();
-    el.focusCount.textContent = '猫咪好感 ' + save.catAffection;
+    el.focusCount.textContent = '轻轻顺毛';
     persist(); updateHUD();
     if (petNetTick >= 3) { Net.action('pet'); petNetTick = 0; }
   }
@@ -2523,14 +2689,12 @@ function bindCoin() {
       const rip = document.createElement('div'); rip.className = 'coin-ripple';
       rip.style.left = lx + 'px'; rip.style.top = ly + 'px'; stage.appendChild(rip);
       setTimeout(() => { splash.remove(); rip.remove(); }, 1350);
-      // 面板里也留下这枚沉底的硬币：越投越多，看得见积累
+      // 面板里也留下这枚沉底的硬币：越投越多，看得见积累（不再删最旧）
       const water = $('coinWater');
       if (water) {
         const sunk = document.createElement('div'); sunk.className = 'coin sunk-coin';
         sunk.style.left = lx + 'px'; sunk.style.top = ly + 'px';
         water.appendChild(sunk);
-        const sunkAll = water.querySelectorAll('.sunk-coin');
-        if (sunkAll.length > 16) sunkAll[0].remove();
       }
 
       const m = mouth.getBoundingClientRect();
@@ -2538,28 +2702,26 @@ function bindCoin() {
       // 投进蟾口是低概率的福分：瞄准蟾口也只有约四分之一能进，随便点水面基本都落水
       const aimed = Math.hypot(lx - mx, ly - my) < 54;
       const hit = aimed ? Math.random() < 0.25 : Math.random() < 0.05;
-      addCoin();
+      // 3D 落点与面板瞄准点用同一组归一化坐标，消除「面板投这里、院里落那里」的不同步
+      const dropX = POND.x + (lx / r.width - 0.5) * 3.4;
+      const dropZ = POND.z + (ly / r.height - 0.5) * 2.9;
+      addCoin(dropX, dropZ);
       Sound.unlock();
-
-      // 3D 荷池里真实落下这枚硬币：坠入水中、沉到池底全程可见，随后并入池底硬币堆
-      const dropX = POND.x + (Math.random() - 0.5) * 1.3;
-      const dropZ = POND.z + (Math.random() - 0.5) * 1.1;
       pondCoinDrop(dropX, dropZ, hit);
       pondSplash(dropX, dropZ, hit);
 
       if (hit) {
-        save.totalMerit += 8; save.coinHit += 1; persist(); updateHUD();
+        save.coinHit += 1; persist();
         toad.classList.remove('happy'); void toad.offsetWidth; toad.classList.add('happy');
         const txt = document.createElement('div'); txt.className = 'coin-hit-text';
-        txt.textContent = '招财进宝 · 功德 +8'; stage.appendChild(txt);
+        txt.textContent = '一声清响'; stage.appendChild(txt);
         setTimeout(() => txt.remove(), 1550);
         Sound.chime();
         Net.action('coin');
       } else {
-        save.totalMerit += 1; persist(); updateHUD();
         Sound.tick();
       }
-      el.focusCount.textContent = hit ? '投进金蟾口 · 招财进宝 +8' : '落进荷池 · 功德 +1 · 再投一枚';
+      el.focusCount.textContent = hit ? '投进金蟾口 · 一声清响' : '落进荷池 · 涟漪渐开';
       coinBusy = false;
     };
   });
@@ -2573,7 +2735,7 @@ function applyLampState(l) {
   if (name) name.textContent = (l.name || '我') + ' 的愿';
   if (text) text.textContent = l.wish;
   if (hint) hint.textContent = '长明灯已亮 · 明日再来';
-  el.focusCount.textContent = '今日已点一盏 · ' + l.wish;
+  el.focusCount.textContent = '愿 · ' + l.wish;
 }
 function bindLamp() {
   const st = $('lampStage'), wick = $('lampWick'), input = $('lampWish');
@@ -2657,7 +2819,15 @@ const Net = (function () {
     } catch (_) { emit('presence', { count: -1 }); setTimeout(connect, 2500); }
   }
   function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
-  return { connect, on, move: (x, z) => send({ type: 'move', x, z }), action: (p) => send({ type: 'action', pose: p }), lightLamp: (w) => send({ type: 'lightLamp', wish: w }) };
+  return { connect, on,
+    move: (x, z) => send({ type: 'move', x, z }),
+    action: (p) => send({ type: 'action', pose: p }),
+    lightLamp: (w) => send({ type: 'lightLamp', wish: w }),
+    coinDrop: (x, z) => send({ type: 'coinDrop', x, z }),
+    greet: (to) => send({ type: 'greet', to }),
+    greetAccept: (to) => send({ type: 'greetAccept', to }),
+    chat: (to, idx) => send({ type: 'chat', to, idx }),
+    chatClose: () => send({ type: 'chatClose' }) };
 })();
 
 function addPeer(m) {
@@ -2667,6 +2837,8 @@ function addPeer(m) {
   mk.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
   scene.add(mk.group);
   const label = document.createElement('div'); label.className = 'pname'; label.textContent = m.name || '香客'; el.labels.appendChild(label);
+  // 点同修法号牌 = 合十行礼并发出同坐邀请（不弹窗、不抢镜头）
+  label.addEventListener('click', (e) => { e.stopPropagation(); startGreet(m.id); });
   peers[m.id] = {
     group: mk.group, bowPivot: mk.bowPivot, lower: mk.lower, knees: mk.knees,
     hands: mk.hands, eyes: mk.eyes, rig: mk.rig, target: new THREE.Vector3(m.x, 0, m.z),
@@ -2676,10 +2848,20 @@ function addPeer(m) {
 }
 
 // ===================== HUD =====================
+// v3 宪章：氛围观赏型、零数值。功德 / 修行时长 / 今日修行 / 计数器全部从界面移除，
+// 存档字段与累计逻辑保留（不破坏旧存档迁移），只是不再显示。
+const DAILY_VERSES = [
+  '风来疏竹 · 雁度寒潭', '竹密不妨流水过', '山高岂碍白云飞',
+  '闲看庭前花开花落', '云在青天水在瓶', '一花一世界 · 一叶一如来',
+  '行到水穷处 · 坐看云起时', '心安即是归处'
+];
 function updateHUD() {
-  el.merit.textContent = save.totalMerit;
-  el.session.textContent = fmtTime(sessionSeconds);
-  el.today.textContent = fmtTime(co.seconds);
+  if (el.dailyVerse) {
+    const d = new Date();
+    const k = d.getFullYear() * 372 + (d.getMonth() + 1) * 31 + d.getDate();
+    el.dailyVerse.textContent = DAILY_VERSES[k % DAILY_VERSES.length];
+  }
+  if (el.presenceHint) el.presenceHint.textContent = '佛前 18 席 · 随意落座';
 }
 let toastTimer = null;
 function showToast(msg) {
@@ -2687,7 +2869,7 @@ function showToast(msg) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.toast.classList.remove('show'), 1800);
 }
 let muted = false;
-function toggleMute() { muted = !muted; Sound.setMute(muted); el.mute.textContent = muted ? '🔇 已静音' : '🔊 声音'; }
+function toggleMute() { muted = !muted; Sound.setMute(muted); el.mute.textContent = muted ? '已静音' : '声音'; }
 function resetSave() {
   if (!confirm('确定重置静修记录？功德、点亮的灯与修行时间都会归零。')) return;
   try { localStorage.removeItem(CONFIG.SAVE_KEY); localStorage.removeItem(CONFIG.CO_KEY); } catch (e) {}
@@ -2772,6 +2954,80 @@ function updateCamera(dt) {
   }
   camera.lookAt(lookX, lookY, lookZ);
 }
+// ===================== 同修社交：行礼 / 邀请 / 气泡 / 第三人省略号 =====================
+let inviteTag = null, inviteTimer = 0;
+function startGreet(id) {
+  if (id === myId || !peers[id] || chatPeerId !== null) return;
+  playGreet(); Net.greet(id);
+  showToast('已合十 · 待对方回礼');
+}
+function showInvite(from, name) {
+  if (!el.labels) return;
+  if (inviteTag) inviteTag.remove();
+  const tag = document.createElement('div');
+  tag.className = 'greet-invite';
+  tag.textContent = (name || '一位同修') + ' 合十 · 点此回礼';
+  tag.addEventListener('click', (e) => {
+    e.stopPropagation();
+    tag.remove(); if (inviteTag === tag) inviteTag = null;
+    playGreet(); Net.greetAccept(from);
+  });
+  el.labels.appendChild(tag);
+  inviteTag = tag;
+  clearTimeout(inviteTimer);
+  inviteTimer = setTimeout(() => { tag.remove(); if (inviteTag === tag) inviteTag = null; }, 8000);
+}
+function showChatBubble(targetId, text, mine) {
+  if (!el.labels) return;
+  const node = document.createElement('div');
+  node.className = 'chat-bubble' + (mine ? ' mine' : '');
+  node.textContent = text;
+  el.labels.appendChild(node);
+  if (targetId === myId) {
+    if (selfBubble) selfBubble.remove();
+    selfBubble = node;
+  } else {
+    const p = peers[targetId];
+    if (!p) { node.remove(); return; }
+    if (p.bubble) p.bubble.remove();
+    p.bubble = node;
+  }
+  clearTimeout(bubbleTimers[targetId]);
+  bubbleTimers[targetId] = setTimeout(() => {
+    node.remove();
+    if (targetId === myId) { if (selfBubble === node) selfBubble = null; }
+    else if (peers[targetId] && peers[targetId].bubble === node) peers[targetId].bubble = null;
+  }, 5600);
+}
+function showMute(id) {
+  if (id === myId || !peers[id] || !el.labels) return;
+  const p = peers[id];
+  if (p.mute) p.mute.remove();
+  const node = document.createElement('div');
+  node.className = 'chat-mute'; node.textContent = '···';
+  el.labels.appendChild(node); p.mute = node;
+  setTimeout(() => { node.remove(); if (p.mute === node) p.mute = null; }, 5600);
+}
+function openChatBar(peerId, name) {
+  chatPeerId = peerId;
+  const bar = $('chatBar'), lines = $('chatLines'), peer = $('chatPeer');
+  if (!bar || !lines || !peer) return;
+  peer.textContent = '与 ' + (name || '同修') + ' 同坐';
+  lines.innerHTML = '';
+  CHAT_LINES.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = s;
+    b.addEventListener('click', () => { if (chatPeerId !== null) Net.chat(chatPeerId, i); });
+    lines.appendChild(b);
+  });
+  bar.classList.add('show');
+}
+function closeChatBar(localOnly) {
+  chatPeerId = null;
+  const bar = $('chatBar'); if (bar) bar.classList.remove('show');
+  if (!localOnly) Net.chatClose();
+}
+
 function updateLabels() {
   if (!el.labels) return;
   const W = el.labels.clientWidth, H = el.labels.clientHeight;
@@ -2796,9 +3052,17 @@ function updateLabels() {
     const v = monkObj.position.clone(); v.y += 2.52 - (kneeling ? 0.34 : 0); v.project(camera);
     put(selfLabel, v);
   }
+  // 气泡 / 回礼签 / 省略号复用同一套屏幕投影与 26px 避让，不再另写一套
+  if ((selfBubble || inviteTag) && monkObj) {
+    const v = monkObj.position.clone(); v.y += 2.52 - (kneeling ? 0.34 : 0); v.project(camera);
+    if (selfBubble) put(selfBubble, v);
+    if (inviteTag) put(inviteTag, v);
+  }
   for (const id in peers) {
     const p = peers[id]; const v = p.group.position.clone(); v.y += 2.4; v.project(camera);
     put(p.label, v);
+    if (p.bubble) put(p.bubble, v);
+    if (p.mute) put(p.mute, v);
   }
 }
 
@@ -2811,6 +3075,7 @@ function update(dt) {
   if (coPersistT <= 0) { persistCo(); coPersistT = 3; }
 
   if (monkPoseT > 0) monkPoseT -= dt;
+  if (greetAnim > 0) greetAnim = Math.max(0, greetAnim - dt);   // 1.85s 行礼（含 0.5s 收手回落）
   const dx = target.x - monkObj.position.x, dz = target.z - monkObj.position.z, d = Math.hypot(dx, dz);
   const moving = d > 0.05;
   if (moving) {
@@ -2844,7 +3109,7 @@ function update(dt) {
   // 合十 / 跪拜合掌：双手从袖口翻起合于胸前（k 越大越合拢），袖臂同步抬起
   const ckSelf = monkPose === 'clasp' ? clamp(1 - monkPoseT / 0.8, 0, 1) : 0;
   const bkSelf = kneelT > 0.4 ? clamp((kneelT - 0.4) / 0.6, 0, 1) : 0;
-  const hkSelf = Math.max(ckSelf, bkSelf);
+  const hkSelf = Math.max(ckSelf, bkSelf, greetK(greetAnim));
   hands.visible = hkSelf > 0.02;
   handsRigApply(hands, monkRig, hkSelf);
   for (const c of cushions) {
@@ -2909,7 +3174,8 @@ function update(dt) {
     if (p.knees) for (const k of p.knees) k.visible = p.kneelT > 0.32;
     const ckP = p.pose === 'clasp' ? clamp(1 - p.poseT / 0.8, 0, 1) : 0;
     const bkP = p.kneelT > 0.4 ? clamp((p.kneelT - 0.4) / 0.6, 0, 1) : 0;
-    const hkP = Math.max(ckP, bkP);
+    if (p.greetAnim > 0) p.greetAnim = Math.max(0, p.greetAnim - dt);
+    const hkP = Math.max(ckP, bkP, greetK(p.greetAnim || 0));
     p.hands.visible = hkP > 0.02;
     handsRigApply(p.hands, p.rig, hkP);
   }
@@ -3143,7 +3409,7 @@ function applyPropSprites(kind, box) {
 }
 
 async function boot() {
-  el.merit = $('merit'); el.session = $('sessionTime'); el.today = $('todayTime');
+  el.dailyVerse = $('dailyVerse'); el.presenceHint = $('presenceHint');
   el.presence = $('presence'); el.toast = $('toast'); el.mute = $('mute'); el.labels = $('labels');
   el.tip = $('hoverTip'); el.focus = $('focus'); el.focusObj = $('focusObj'); el.focusCount = $('focusCount');
   el.dharma = $('dharmaName'); el.fullGate = $('fullGate'); el.fullMsg = $('fullMsg');
@@ -3199,6 +3465,19 @@ async function boot() {
     if (myLamp && !todayLamps.some(l => l.name === myLamp.name && l.date === myLamp.date)) todayLamps.push(myLamp);
     updateLanterns();
     (m.peers || []).forEach(addPeer);
+    // 池底硬币由服务端权威下发：进庙就能看到全院日积月累的钱，重启不丢。
+    pondCoinData = (m.coins || []).slice();
+    pondCoinTotal = m.coinTotal || pondCoinData.length;
+    refreshPondCoins();
+  });
+  Net.on('coinDropped', (m) => {
+    if (!m.coin) return;
+    if (m.self) { pondCoinTotal = m.total || pondCoinTotal; return; } // 自己的币由飞行落定后并入，避免重叠
+    pondCoinData.push(m.coin);
+    if (pondCoinData.length > 500) pondCoinData.shift();
+    pondCoinTotal = m.total || pondCoinTotal + 1;
+    refreshPondCoins();
+    pondSplash(POND.x + m.coin.x, POND.z + m.coin.z, false);
   });
   Net.on('lampOk', (m) => onLampOk(m, false));
   Net.on('lampDeny', onLampDeny);
@@ -3212,7 +3491,24 @@ async function boot() {
     else { p.pose = m.pose; p.poseT = 1.2; }
     if (m.pose === 'fish' && Math.random() < 0.25) CatLife.startle();
   });
-  Net.on('peerLeave', (m) => { const p = peers[m.id]; if (p) { if (p.label) p.label.remove(); scene.remove(p.group); delete peers[m.id]; } });
+  Net.on('greetInvite', (m) => { if (!inviteTag) showInvite(m.from, m.name); });
+  Net.on('peerGreet', (m) => {
+    // 第三人只看到两人相对合十，没有任何文字或系统提示
+    if (peers[m.from]) peers[m.from].greetAnim = GREET_DUR;
+    if (peers[m.to]) peers[m.to].greetAnim = GREET_DUR;
+  });
+  Net.on('chatReady', (m) => openChatBar(m.peerId, m.name));
+  Net.on('chatMsg', (m) => {
+    if (typeof m.idx !== 'number' || !CHAT_LINES[m.idx]) return;
+    showChatBubble(m.from, CHAT_LINES[m.idx], m.from === myId);
+  });
+  Net.on('chatMute', (m) => { showMute(m.from); showMute(m.to); });   // 光遇式：旁观者只见「···」
+  Net.on('chatEnd', () => closeChatBar(true));
+  Net.on('peerLeave', (m) => {
+    const p = peers[m.id];
+    if (p) { if (p.label) p.label.remove(); if (p.bubble) p.bubble.remove(); if (p.mute) p.mute.remove(); scene.remove(p.group); delete peers[m.id]; }
+    if (chatPeerId === m.id) closeChatBar(true);
+  });
   Net.on('presence', (m) => {
     if (m.count < 0) el.presence.textContent = '未连接 · 庙中空着';
     else if (m.count <= 0) el.presence.textContent = '此刻庙中唯有你一人 · 佛前 ' + CUSHION_SEATS + ' 席';
@@ -3240,7 +3536,8 @@ async function boot() {
     vv.addEventListener('resize', syncVV); vv.addEventListener('scroll', syncVV);
   }
   el.mute.addEventListener('click', toggleMute);
-  $('reset').addEventListener('click', resetSave);
+  const resetBtn = $('reset'); if (resetBtn) resetBtn.addEventListener('click', resetSave);
+  const chatCloseBtn = $('chatClose'); if (chatCloseBtn) chatCloseBtn.addEventListener('click', () => closeChatBar());
   $('focusClose').addEventListener('click', closeFocus);
   // 木鱼 / 念珠：固定在右下角，点一下直接开面板，不用在场景里找
   // 用 pointerdown 而非 click：手机上少一次 300ms 判定，也不会留下点击高亮

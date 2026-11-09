@@ -55,11 +55,10 @@
   .dharma-txt b{display:block;font-size:23px;letter-spacing:5px;font-weight:normal;color:#2e2b26;
     line-height:1.15;text-shadow:0 1px 0 rgba(255,255,255,.5)}
   .dharma-wait{color:#9b8a68;letter-spacing:3px}
-  .stats{display:flex;flex-direction:column;gap:5px}
-  .stat{display:flex;align-items:baseline;justify-content:space-between;font-size:12px;
-    letter-spacing:2px;color:var(--ink-soft)}
-  .stat b{font-size:14px;font-weight:normal;color:#5a4526;letter-spacing:1px;
-    font-variant-numeric:tabular-nums}
+  .stats{display:flex;flex-direction:column;gap:4px}
+  .verse{font-family:Kaiti SC,STKaiti,KaiTi,serif;font-size:13px;letter-spacing:2px;
+    color:#4a4234;line-height:1.6}
+  .verse-sub{font-size:11px;letter-spacing:2px;color:#8a7550}
 
   .tools{position:fixed;right:22px;top:22px;z-index:20;display:flex;gap:8px}
   .tools button{font:inherit;font-size:12px;letter-spacing:2px;color:#4a4234;cursor:pointer;
@@ -72,9 +71,9 @@
   /* ---------------- 右下角：木鱼 / 念珠 工具坞（不用在场景里找） ---------------- */
   .dock{position:fixed;right:22px;bottom:26px;z-index:22;display:flex;flex-direction:column;gap:10px}
   .dock-btn{display:flex;align-items:center;gap:10px;cursor:pointer;font:inherit;
-    padding:9px 14px 9px 10px;border-radius:12px;color:var(--ink);
+    padding:9px 14px 9px 10px;border-radius:4px;color:var(--ink);
     background-image:var(--paper-tex);background-color:rgba(240,230,208,.94);
-    border:1px solid rgba(120,96,58,.55);backdrop-filter:blur(8px);
+    border:1px solid rgba(120,96,58,.55);
     box-shadow:0 8px 22px rgba(12,14,12,.42),inset 0 0 0 3px rgba(255,255,255,.22);
     transition:transform .22s,border-color .22s,background-color .22s}
   .dock-btn:hover{transform:translateX(-4px);border-color:var(--cinnabar);
@@ -116,25 +115,53 @@
   #hoverTip .k{color:#7b4f22}
   #hoverTip .d{opacity:.6;font-size:11px;margin-left:9px;color:#8a6a3e}
 
-  /* 头顶法号：别人淡墨、自己朱金 */
-  .pname{position:absolute;transform:translate(-50%,-100%);font-size:12px;color:#f4ead4;
-    text-shadow:0 1px 4px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.6);
-    white-space:nowrap;letter-spacing:2px;padding:2px 9px;border-radius:12px;
-    background:rgba(28,32,30,.42);border:1px solid rgba(230,215,180,.22)}
-  .selfname{position:absolute;transform:translate(-50%,-100%);font-size:13px;color:#fff0cf;
-    text-shadow:0 1px 4px rgba(0,0,0,.9);white-space:nowrap;letter-spacing:3px;
-    padding:3px 12px;border-radius:12px;background:rgba(168,67,58,.78);
-    border:1px solid rgba(240,205,135,.75);box-shadow:0 0 14px rgba(201,160,82,.4);
-    animation:floatName 3.4s ease-in-out infinite}
-  .selfname::after{content:'';position:absolute;left:50%;bottom:-5px;width:7px;height:7px;
-    transform:translateX(-50%) rotate(45deg);background:rgba(168,67,58,.78);
-    border-right:1px solid rgba(240,205,135,.75);border-bottom:1px solid rgba(240,205,135,.75)}
-  @keyframes floatName{0%,100%{margin-top:0}50%{margin-top:-3px}}
+  /* 头顶法号：v3 宣纸墨线，去掉发光胶囊、描边光晕与浮动动画 */
+  .pname{position:absolute;transform:translate(-50%,-100%);font-size:12px;color:#2E3532;
+    white-space:nowrap;letter-spacing:2px;padding:2px 8px;border-radius:3px;
+    background:rgba(236,229,213,.92);border:1px solid rgba(46,53,50,.28)}
+  .selfname{position:absolute;transform:translate(-50%,-100%);font-size:12px;color:#2E3532;
+    white-space:nowrap;letter-spacing:2px;padding:3px 9px;border-radius:3px;
+    background:rgba(236,229,213,.94);border:1px solid rgba(150,87,76,.55)}
+  .pname{pointer-events:auto;cursor:pointer}
+  .pname:hover{border-color:rgba(150,87,76,.7)}
+
+  /* ---- 同修行礼与仅两人可见的私聊（宣纸墨线，光遇式克制） ---- */
+  .chat-bubble{position:absolute;transform:translate(-50%,-100%);z-index:31;
+    font-family:Kaiti SC,STKaiti,KaiTi,serif;font-size:13px;line-height:1.5;
+    letter-spacing:1px;color:#2E3532;background:rgba(236,229,213,.94);
+    border:1px solid rgba(180,154,104,.65);border-radius:3px;
+    padding:5px 10px;max-width:220px;pointer-events:none;
+    animation:chatIn .28s ease-out both}
+  .chat-bubble.mine{background:rgba(194,198,184,.5)}
+  @keyframes chatIn{from{opacity:0;transform:translate(-50%,-100%) translateY(6px)}
+    to{opacity:1;transform:translate(-50%,-100%) translateY(0)}}
+  .chat-mute{position:absolute;transform:translate(-50%,-100%);z-index:30;
+    font-size:17px;letter-spacing:3px;color:rgba(46,53,50,.42);pointer-events:none}
+  .greet-invite{position:absolute;transform:translate(-50%,-100%);z-index:36;
+    font-size:12px;letter-spacing:2px;color:#96574C;cursor:pointer;pointer-events:auto;
+    white-space:nowrap;padding:4px 10px;background:rgba(236,229,213,.96);
+    border:1px solid rgba(150,87,76,.55);border-radius:3px;
+    animation:chatIn .3s ease-out both}
+  #chatBar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(12px);
+    z-index:40;display:none;align-items:center;gap:8px;max-width:min(92vw,720px);
+    padding:8px 12px;background:rgba(236,229,213,.96);
+    border:1px solid rgba(120,96,58,.5);border-radius:4px;
+    box-shadow:0 6px 20px rgba(18,24,20,.2)}
+  #chatBar.show{display:flex;animation:chatBarIn .3s ease-out both}
+  @keyframes chatBarIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}
+    to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  #chatBar .peer{font-size:12px;letter-spacing:2px;color:#96574C;white-space:nowrap}
+  #chatBar .lines{display:flex;gap:6px;overflow-x:auto;max-width:min(66vw,520px);scrollbar-width:none}
+  #chatBar .lines::-webkit-scrollbar{display:none}
+  #chatBar button{font:inherit;font-size:12px;letter-spacing:1px;color:#2E3532;cursor:pointer;
+    white-space:nowrap;padding:6px 10px;background:rgba(255,255,255,.35);
+    border:1px solid rgba(120,96,58,.4);border-radius:3px}
+  #chatBar button:hover{border-color:#96574C;background:rgba(255,255,255,.6)}
 
   /* ---------------- 进庙赐名卷轴 ---------------- */
   #entry{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse at 50% 45%,rgba(38,42,38,.34),rgba(20,24,22,.66));
-    backdrop-filter:blur(3px);cursor:pointer}
+    background:radial-gradient(ellipse at 50% 45%,rgba(38,42,38,.30),rgba(20,24,22,.58));
+    cursor:pointer}
   #entry.show{display:flex}
   .scroll{position:relative;width:min(86vw,430px);padding:0 0 6px;
     animation:scrollIn .85s cubic-bezier(.18,.9,.3,1) both}
@@ -171,8 +198,7 @@
 
   /* ---------------- 独立放大界面（木鱼/念珠/上香/撸猫/点灯） ---------------- */
   #focus{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse at 50% 42%,rgba(92,98,88,.74),rgba(26,32,30,.94));
-    backdrop-filter:blur(12px)}
+    background:linear-gradient(180deg,rgba(236,229,213,.96),rgba(214,208,192,.96))}
   #focus.show{display:flex;animation:focusIn .42s ease both}
   @keyframes focusIn{from{opacity:0}to{opacity:1}}
   #focus::before{content:'';position:absolute;inset:0;pointer-events:none;
@@ -180,15 +206,16 @@
     mix-blend-mode:soft-light;opacity:.12}
   #focus::after{content:'';position:absolute;left:50%;top:46%;width:70vmin;height:70vmin;
     transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
-    background:radial-gradient(circle,rgba(226,186,112,.16),transparent 68%)}
+    background:radial-gradient(circle,rgba(46,53,50,.045),transparent 68%)}
   #focus .close{position:absolute;right:26px;top:22px;font:inherit;font-size:12px;letter-spacing:3px;
-    color:#f0e2c4;cursor:pointer;background:rgba(30,34,32,.5);
-    border:1px solid rgba(201,160,82,.5);border-radius:20px;padding:8px 18px;z-index:8;
+    color:#96574C;cursor:pointer;background:rgba(236,229,213,.9);
+    border:1px solid rgba(150,87,76,.55);border-radius:3px;padding:7px 15px;z-index:8;
     transition:all .2s}
-  #focus .close:hover{border-color:var(--gold-lt);background:rgba(168,67,58,.7)}
+  #focus .close:hover{border-color:#96574C;background:rgba(236,229,213,1)}
   #focus .count{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);
-    font-size:13px;opacity:.72;letter-spacing:4px;pointer-events:none;white-space:nowrap;
-    color:var(--gold-lt);text-shadow:0 2px 8px rgba(0,0,0,.7)}
+    font-family:Kaiti SC,STKaiti,KaiTi,serif;
+    font-size:13px;opacity:.82;letter-spacing:3px;pointer-events:none;white-space:nowrap;
+    color:#2E3532}
   #focus .obj{position:relative;width:min(58vmin,430px);height:min(58vmin,430px);cursor:pointer;touch-action:none;
     display:flex;align-items:center;justify-content:center;z-index:2;
     animation:objIn .5s cubic-bezier(.2,1.3,.4,1) both;
@@ -328,15 +355,16 @@
   /* ---- 荷池抛币 ---- */
   .coin-stage{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
   .coin-scene{position:relative;width:min(80vw,660px);height:min(66vh,520px)}
-  .coin-water{position:absolute;left:0;right:0;bottom:0;height:66%;border-radius:50%/40%;
-    background:radial-gradient(ellipse at 50% 26%,#8fb6b6 0%,#5b8a90 46%,#35636d 74%,#22434d 100%);
-    box-shadow:inset 0 6px 40px rgba(12,34,40,.55),inset 0 -24px 60px rgba(8,26,32,.6),0 20px 44px rgba(0,0,0,.55);
+  /* v3：水面是俯视的浅碟，不是一颗立体的蓝椭球；低饱和雾青，池底与沉币可见 */
+  .coin-water{position:absolute;left:0;right:0;bottom:0;height:66%;border-radius:46%/18%;
+    background:linear-gradient(180deg,rgba(194,198,184,.52) 0%,rgba(120,139,128,.58) 48%,rgba(70,86,80,.68) 100%);
+    box-shadow:inset 0 1px 0 rgba(236,229,213,.45);
     cursor:crosshair;overflow:hidden;z-index:2}
   .coin-water::before{content:'';position:absolute;inset:0;
-    background:radial-gradient(ellipse at 38% 18%,rgba(255,244,214,.32),transparent 46%);
+    background:radial-gradient(ellipse at 38% 18%,rgba(236,229,213,.22),transparent 52%);
     pointer-events:none}
   .coin-water::after{content:'';position:absolute;left:6%;right:6%;top:8%;height:2px;border-radius:50%;
-    background:linear-gradient(90deg,transparent,rgba(226,244,238,.35),transparent);pointer-events:none}
+    background:linear-gradient(90deg,transparent,rgba(236,229,213,.45),transparent);pointer-events:none}
   .coin-ripple{position:absolute;border:2px solid rgba(226,246,240,.62);border-radius:50%;
     transform:translate(-50%,-50%);pointer-events:none;animation:coinRip 1.15s ease-out forwards}
   @keyframes coinRip{from{width:10px;height:10px;opacity:.9}to{width:190px;height:190px;opacity:0}}
@@ -345,21 +373,23 @@
   @keyframes coinSplash{from{opacity:1;transform:translate(-50%,-50%) scale(.6)}
     to{opacity:0;transform:translate(-50%,-140%) scale(1.6)}}
   .coin{position:absolute;width:22px;height:22px;border-radius:50%;z-index:6;pointer-events:none;
-    background:radial-gradient(circle at 34% 28%,#ffefc2,#d9a94c 58%,#8a5f1c);
-    box-shadow:inset 0 0 0 2px rgba(255,236,184,.55),0 0 16px rgba(255,210,120,.75);
+    background:radial-gradient(circle at 34% 28%,#E4D6B4,#B49A68 62%,#8C7448);
+    box-shadow:inset 0 0 0 2px rgba(236,229,213,.4),0 2px 6px rgba(46,53,50,.28);
     transform:translate(-50%,-50%)}
   .toss-coin{animation:coinSpin .34s linear infinite}
   @keyframes coinSpin{from{transform:translate(-50%,-50%) rotateY(0)}to{transform:translate(-50%,-50%) rotateY(360deg)}}
-  .sunk-coin{z-index:3;opacity:.72;filter:brightness(.75) saturate(.85) blur(.4px);
-    box-shadow:inset 0 0 0 2px rgba(255,236,184,.28),0 3px 10px rgba(4,16,20,.55);
+  .sunk-coin{z-index:3;opacity:.8;filter:brightness(.82) saturate(.7);
+    box-shadow:inset 0 0 0 2px rgba(236,229,213,.2),0 2px 5px rgba(46,53,50,.3);
     transform:translate(-50%,-50%) scale(.9)}
+  .sunk-coin::after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;
+    transform:translate(-50%,-50%);background:rgba(70,86,80,.7);border-radius:1px}
   /* 池底沙石：让「沉底」有落点可依 */
   .coin-floor{position:absolute;left:10%;right:10%;bottom:6%;height:34%;border-radius:50%;
-    background:radial-gradient(ellipse at 50% 40%,rgba(216,188,132,.42),rgba(146,116,64,.2) 58%,transparent 80%);
+    background:radial-gradient(ellipse at 50% 40%,rgba(182,176,158,.42),rgba(120,124,112,.22) 58%,transparent 80%);
     filter:blur(2px)}
   .coin-spark{position:absolute;width:7px;height:7px;border-radius:50%;z-index:7;pointer-events:none;
-    background:radial-gradient(circle,#fff5cc,#f0c35e 58%,rgba(240,195,94,0));
-    box-shadow:0 0 10px rgba(255,214,130,.9);animation:coinSpark .72s ease-out forwards}
+    background:radial-gradient(circle,rgba(236,229,213,.9),rgba(194,198,184,.4) 58%,transparent);
+    animation:coinSpark .72s ease-out forwards}
   @keyframes coinSpark{from{transform:translate(-50%,-50%) scale(1.1);opacity:1}
     to{transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,-30px))) scale(.15);opacity:0}}
 
@@ -395,16 +425,15 @@
   @keyframes toadHop{0%,100%{transform:translateX(-50%) translateY(0) scale(1)}
     34%{transform:translateX(-50%) translateY(-18px) scale(1.06,.94)}
     62%{transform:translateX(-50%) translateY(0) scale(.96,1.05)}}
-  .toad.happy .toad-mouth{box-shadow:0 0 26px 8px rgba(255,214,130,.85),inset 0 3px 6px rgba(0,0,0,.6)}
+  .toad.happy .toad-mouth{box-shadow:inset 0 3px 6px rgba(0,0,0,.45)}
   .coin-hit-text{position:absolute;left:50%;top:22%;transform:translate(-50%,0);z-index:7;
-    font-size:17px;letter-spacing:5px;color:#ffe6a8;pointer-events:none;
-    text-shadow:0 0 18px rgba(255,196,96,.9),0 2px 6px rgba(0,0,0,.7);
+    font-size:17px;letter-spacing:5px;color:#2E3532;pointer-events:none;
     animation:coinHitText 1.5s ease-out forwards}
   @keyframes coinHitText{0%{opacity:0;transform:translate(-50%,10px) scale(.85)}
     22%{opacity:1;transform:translate(-50%,-4px) scale(1)}
     100%{opacity:0;transform:translate(-50%,-46px) scale(1)}}
   .coin-hint{position:absolute;left:50%;bottom:-4%;transform:translateX(-50%);
-    font-size:12px;letter-spacing:3px;color:rgba(232,207,148,.7);white-space:nowrap;pointer-events:none}
+    font-size:12px;letter-spacing:3px;color:rgba(46,53,50,.62);white-space:nowrap;pointer-events:none}
 
   /* ---- 撸猫 ---- */
   .cat-stage{position:relative;width:min(60vmin,430px);height:min(60vmin,430px);cursor:grab;touch-action:none}
@@ -523,7 +552,7 @@
 
   /* 满 50 席：温和留白，不催人 */
   #fullGate{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
-    background:rgba(22,28,26,.76);backdrop-filter:blur(8px)}
+    background:rgba(46,53,50,.62)}
   #fullGate.show{display:flex}
   #fullGate .card{text-align:center;line-height:2.2;letter-spacing:2px;
     background-image:var(--paper-tex);background-color:#efe5cc;color:var(--ink);
@@ -540,7 +569,7 @@
     .seal{flex-basis:26px;width:26px;height:26px;font-size:9px}
     .dharma-txt small{font-size:8px;letter-spacing:1px}
     .dharma-txt b{font-size:17px;letter-spacing:2px}
-    .stats{gap:2px}.stat{font-size:10px;letter-spacing:1px}.stat b{font-size:11px}
+    .stats{gap:2px}.verse{font-size:10px;letter-spacing:1px}.verse-sub{font-size:9px}
     .tools{right:10px;top:10px;gap:6px}
     .tools button{height:34px;padding:0 9px;font-size:10px;letter-spacing:1px;border-radius:17px}
     .dock{right:10px;bottom:calc(12px + env(safe-area-inset-bottom));gap:7px}
@@ -579,7 +608,7 @@
     .hud .dharma-row{padding-bottom:3px;margin-bottom:3px}
     .seal{width:22px;height:22px;flex-basis:22px;font-size:8px}
     .dharma-txt small{font-size:8px}.dharma-txt b{font-size:15px;letter-spacing:2px}
-    .stats{gap:1px}.stat{font-size:9px}.stat b{font-size:10px}
+    .stats{gap:1px}.verse{font-size:9px}.verse-sub{font-size:9px}
     .tools{right:8px;top:8px;gap:5px}.tools button{height:30px;padding:0 9px;font-size:10px}
     .dock{right:8px;bottom:8px;gap:5px}.dock-btn{padding:4px 8px;min-height:38px;border-radius:9px}
     .dock-btn svg{width:20px;height:20px;flex-basis:20px}
@@ -642,15 +671,13 @@
     <div class="dharma-txt"><small>今 日 法 号</small><b id="dharmaName" class="dharma-wait">···</b></div>
   </div>
   <div class="stats">
-    <div class="stat"><span>修行时长</span><b id="sessionTime">00:00</b></div>
-    <div class="stat"><span>功德</span><b id="merit">0</b></div>
-    <div class="stat"><span>今日修行</span><b id="todayTime">00:00</b></div>
+    <div class="verse" id="dailyVerse">风来疏竹 · 雁度寒潭</div>
+    <div class="verse-sub" id="presenceHint">此刻庙中唯有你一人</div>
   </div>
 </div>
 
 <div class="tools">
-  <button type="button" id="mute" title="声音">🔊 声音</button>
-  <button type="button" id="reset" title="重置记录">重置</button>
+  <button type="button" id="mute" title="声音">声音</button>
 </div>
 
 <!-- 木鱼与念珠：不再散落在院子边角，固定在这里，随时点开 -->
@@ -682,9 +709,16 @@
 </div>
 
 <div class="presence" id="presence">连接中…</div>
-<div id="fullGate"><div class="card"><b>庙中已满</b><span id="fullMsg">此刻已有 50 位同修在殿内，稍后再来吧</span><small>会自动再试一次 · 清静无需抢</small></div></div>
+<div id="fullGate"><div class="card"><b>且待片刻</b><span id="fullMsg">此刻院中同修已多，稍后再来吧</span><small>会自动再试一次 · 清静无需抢</small></div></div>
 <div class="toast" id="toast"></div>
 <div id="hoverTip"><span class="k"></span><span class="d"></span></div>
+
+<!-- 预设短句私聊：仅互相回礼的两人可见，第三人只见省略号 -->
+<div id="chatBar">
+  <span class="peer" id="chatPeer"></span>
+  <div class="lines" id="chatLines"></div>
+  <button type="button" id="chatClose" title="结束同坐">收起</button>
+</div>
 
 <div id="entry"><div class="scroll">
   <div class="rod"></div>
@@ -701,7 +735,7 @@
 </div></div>
 
 <div id="focus">
-  <button type="button" class="close" id="focusClose">× 收起</button>
+  <button type="button" class="close" id="focusClose">收起</button>
   <div class="obj" id="focusObj"></div>
   <div class="count" id="focusCount"></div>
 </div>
@@ -734,6 +768,6 @@
   }, 4000);
 })();
 </script>
-<script type="module" src="game.js?v=51"></script>
+<script type="module" src="game.js?v=55"></script>
 </body>
 </html>

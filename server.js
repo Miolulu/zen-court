@@ -72,6 +72,31 @@ const peers = new Map(); // id -> {x, z, pose, name}
 const BX = 10, BZ = 8;    // 庭院活动边界（与前端一致）
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// ---- 荷池投币：真实许愿池语义，数据不清理 --------------------------------
+// 只存坐标 / 姿态 / 色调变体，不存愿望、不存玩家身份（隐私）。
+// 进程重启后从磁盘恢复；不跨天清零、不设删除逻辑、不限制累计枚数。
+const POND_FILE = path.join(__dirname, 'data', 'pond-coins.json');
+let pondCoins = [];
+try {
+  const raw = JSON.parse(fs.readFileSync(POND_FILE, 'utf8'));
+  if (Array.isArray(raw)) pondCoins = raw;
+} catch (_) { pondCoins = []; }
+let pondSaveTimer = null;
+function schedulePondSave() {
+  if (pondSaveTimer) return;
+  pondSaveTimer = setTimeout(() => {
+    pondSaveTimer = null;
+    try {
+      fs.mkdirSync(path.dirname(POND_FILE), { recursive: true });
+      const tmp = POND_FILE + '.tmp';
+      fs.writeFileSync(tmp, JSON.stringify(pondCoins), 'utf8');
+      fs.renameSync(tmp, POND_FILE);   // 原子替换，写到一半断电也不会损坏
+    } catch (e) { console.error('[zen-court] pond save failed:', e.message); }
+  }, 2000);
+}
+// 只下发最近 500 枚用于绘制，前端用 InstancedMesh 承载，draw call 恒定。
+function pondSnapshot() { return pondCoins.slice(-500); }
+
 // 两字法号字库：进庙随机赐名，庙内不重名；字都偏安静，避免俗艳与宗教尊号
 const NAME_A = ['清', '明', '云', '竹', '一', '无', '观', '照', '寂', '了', '心', '月', '石', '泉', '松', '雪', '闻', '觉', '澄', '闲', '素', '知', '空', '静', '和', '尘', '溪', '岚', '朴', '玄', '半', '随'];
 const NAME_B = ['念', '照', '心', '然', '和', '非', '一', '相', '栖', '影', '泉', '晴', '尘', '雪', '花', '山', '舟', '灯', '远', '初', '白', '言', '行', '月', '云', '水', '禅', '真', '默', '明', '闲', '知'];
@@ -117,6 +142,25 @@ function broadcast(obj, exceptId) {
   const s = JSON.stringify(obj);
   wss.clients.forEach((c) => { if (c._pid !== exceptId && c.readyState === 1) c.send(s); });
 }
+// 私聊必须服务端定向投递：绝不能广播全文再让前端按 id 过滤（第三方抓包即可看到全文）。
+function sendTo(id, obj) {
+  const s = JSON.stringify(obj);
+  wss.clients.forEach((c) => { if (c._pid === id && c.readyState === 1) c.send(s); });
+}
+function broadcastOthers(obj, a, b) {
+  const s = JSON.stringify(obj);
+  wss.clients.forEach((c) => {
+    if (c._pid !== a && c._pid !== b && c.readyState === 1) c.send(s);
+  });
+}
+// 会话：双方点头回礼后才建立；不落库、不记历史、不存任何文本内容。
+const chatPairs = new Map();    // id -> peerId
+const greetPending = new Map(); // 被招呼者 id -> {from, at}
+function dropChat(id) {
+  const peer = chatPairs.get(id);
+  chatPairs.delete(id);
+  if (peer !== undefined) { chatPairs.delete(peer); try { sendTo(peer, { type: 'chatEnd' }); } catch (_) {} }
+}
 function presence() { return { type: 'presence', count: Math.max(0, peers.size - 1), total: peers.size, capacity: MAX_PLAYERS }; }
 function snapshot(exceptId) {
   const arr = [];
@@ -154,7 +198,9 @@ wss.on('connection', (ws) => {
     const name = (requested && claimName(requested)) || randomName();
     peers.set(id, { x, z, pose: 'idle', name });
 
-    ws.send(JSON.stringify({ type: 'welcome', id, x, z, name, capacity: MAX_PLAYERS, peers: snapshot(id), lamps: todayLamps() }));
+    ws.send(JSON.stringify({ type: 'welcome', id, x, z, name, capacity: MAX_PLAYERS,
+      peers: snapshot(id), lamps: todayLamps(),
+      coins: pondSnapshot(), coinTotal: pondCoins.length }));
     broadcast({ type: 'peerJoin', id, x, z, name }, id);
     broadcast(presence());
     ws.send(JSON.stringify(presence()));
@@ -173,6 +219,55 @@ wss.on('connection', (ws) => {
     } else if (d.type === 'action') {
       p.pose = d.pose || 'idle';
       broadcast({ type: 'peerAction', id, pose: p.pose }, id);
+    } else if (d.type === 'coinDrop') {
+      // 投币：服务端权威记录，全院可见、重启不丢。每人 400ms 限流防刷屏。
+      const now = Date.now();
+      if (ws._lastCoin && now - ws._lastCoin < 400) return;
+      ws._lastCoin = now;
+      const px = Number(d.x), pz = Number(d.z);
+      if (!isFinite(px) || !isFinite(pz)) return;
+      const coin = {
+        id: pondCoins.length + 1,
+        x: clamp(px, -2.1, 2.1), z: clamp(pz, -1.9, 1.9),
+        rot: (Math.random() * Math.PI * 2) | 0, variant: (Math.random() * 4) | 0
+      };
+      // 防御：万一累计到 10 万枚，磁盘与下发仍可控
+      if (pondCoins.length > 100000) return;
+      pondCoins.push(coin);
+      schedulePondSave();
+      ws.send(JSON.stringify({ type: 'coinDropped', coin, total: pondCoins.length, self: true }));
+      broadcast({ type: 'coinDropped', coin, total: pondCoins.length }, id);
+    } else if (d.type === 'greet') {
+      const to = Number(d.to);
+      if (!peers.has(to) || to === id) return;
+      greetPending.set(to, { from: id, at: Date.now() });
+      sendTo(to, { type: 'greetInvite', from: id, name: p.name });
+      // 第三人只看到「两人在行礼」，不含任何文字、不弹系统提示
+      broadcastOthers({ type: 'peerGreet', from: id, to }, id, to);
+    } else if (d.type === 'greetAccept') {
+      const from = Number(d.to);
+      const pend = greetPending.get(id);
+      if (!pend || pend.from !== from || Date.now() - pend.at > 20000) return;
+      greetPending.delete(id);
+      dropChat(id); dropChat(from);
+      chatPairs.set(id, from); chatPairs.set(from, id);
+      const a = peers.get(id), b = peers.get(from);
+      sendTo(id, { type: 'chatReady', peerId: from, name: b ? b.name : '同修' });
+      sendTo(from, { type: 'chatReady', peerId: id, name: a ? a.name : '同修' });
+    } else if (d.type === 'chat') {
+      const to = Number(d.to);
+      if (chatPairs.get(id) !== to) return;          // 只有已互相回礼的两人能聊
+      const idx = Number(d.idx);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= 12) return;  // 只允许预设短句索引
+      const now = Date.now();
+      if (ws._lastChat && now - ws._lastChat < 1200) return;
+      ws._lastChat = now;
+      sendTo(id, { type: 'chatMsg', from: id, idx });
+      sendTo(to, { type: 'chatMsg', from: id, idx });
+      // 第三人只收到「有人在说话」的信号，绝不下发文本或短句索引
+      broadcastOthers({ type: 'chatMute', from: id, to }, id, to);
+    } else if (d.type === 'chatClose') {
+      dropChat(id);
     } else if (d.type === 'lightLamp') {
       const wish = cleanWish(d.wish);
       if (!wish) { ws.send(JSON.stringify({ type: 'lampDeny', reason: 'empty' })); return; }
@@ -193,6 +288,7 @@ wss.on('connection', (ws) => {
     const p = peers.get(id);
     if (!p) return;                       // 满员被拒的连接没有入庙，不广播离庙
     usedNames.delete(p.name); peers.delete(id);
+    dropChat(id); greetPending.delete(id);
     broadcast({ type: 'peerLeave', id });
     broadcast(presence());
   });
