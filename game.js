@@ -267,7 +267,8 @@ const STELE_KEY = CONFIG.SAVE_KEY + ':stele';
 // 氛围观赏型：6 列 × 3 排 = 18 席，间距拉开、单垫放大，殿前留白让佛堂成为主体。
 // 拜垫区从月台前沿（z=-5.0）之后开始，石灯 / 石栏 / 荷池全部让到阵列之外，不再压在垫子上。
 const CUSHION_COLS = 6, CUSHION_ROWS = 3;      // 18 席，不再密铺 50 张
-const CUSHION_X_STEP = 2.45, CUSHION_Z_STEP = 2.9, CUSHION_Z0 = -3.9;  // 净间隙 X 0.82 / Z 1.27，疏朗
+// v3 比例修正：垫子直径 ≈ 人物身高 0.55（0.86 世界单位），阵列收拢不再空旷
+const CUSHION_X_STEP = 2.05, CUSHION_Z_STEP = 2.5, CUSHION_Z0 = -3.6;  // 净间隙 X 1.19 / Z 1.64
 const TERRACE_TOP = 0.16, TERRACE_FRONT = -5.0;      // 月台高度与前沿
 const POND = { x: 0, z: 7.0, r: 2.35, spot: { x: 3.15, z: 7.0 } };  // 荷池居院子正中（中轴上、拜垫之南）：金蟾蹲池心石上，东岸立足投币
 const CUSHION_HALF_W = (CUSHION_COLS - 1) / 2 * CUSHION_X_STEP + 0.7, CUSHION_BACK = CUSHION_Z0 - 0.7, CUSHION_FRONT = CUSHION_Z0 + (CUSHION_ROWS - 1) * CUSHION_Z_STEP + 0.7;
@@ -1615,9 +1616,9 @@ function buildScene() {
           map: clothMap, color: tone,
           roughness: 0.96, emissive: 0xffc46a, emissiveIntensity: 0
         }));
-    if (!GLB_CACHE.cushion) { c.scale.set(1.18, 0.24, 1.18); c.position.set(cx, 0.14, cz); clothMat = c.material; }
+    if (!GLB_CACHE.cushion) { c.scale.set(0.62, 0.15, 0.62); c.position.set(cx, 0.14, cz); clothMat = c.material; }
     else {
-      c.scale.setScalar(1.18);   // 单垫直径 1.38 → 1.63，跪拜位更实在
+      c.scale.setScalar(0.62);   // v3 比例修正：单垫直径 1.38 → 0.86（人物身高的 0.55 倍）
       c.position.set(cx, 0.005, cz);
       clothMat = new THREE.MeshStandardMaterial({
         map: clothMap, color: tone,
@@ -1632,6 +1633,11 @@ function buildScene() {
     if (!GLB_CACHE.cushion) {
       const band = new THREE.Mesh(bandGeo, new THREE.MeshStandardMaterial({ color: 0xb1a17d, roughness: 0.85 }));
       band.rotation.x = Math.PI / 2; c.add(band);
+    } else {
+      // v3：垫子缩小后补一块透明点击热区（半径 0.62 圆盘），保证不因垫子变小而点不中
+      const hit = new THREE.Mesh(new THREE.CircleGeometry(0.62, 20),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+      hit.rotation.x = -Math.PI / 2; hit.position.y = 0.3; c.add(hit);
     }
     c.receiveShadow = true;
     c.userData = {
@@ -1784,18 +1790,19 @@ function buildScene() {
   }
 
   }
-  // ---- 庭院落叶堆：银杏落叶聚成小堆，点一下扫散，过几秒原地重新堆起，可反复扫、不限次数（用户要求「想扫就扫」）----
-  const leafMoundMat = new THREE.MeshStandardMaterial({ color: 0xd9a13c, roughness: 0.95 });
+  // ---- 庭院落叶堆：AI 水墨落叶立绘贴地铺成小堆，点一下扫散，过几秒原地重新堆起，可反复扫、不限次数 ----
+  const leafPileTex = new THREE.TextureLoader().load('assets/sprites/leaf_pile.png', (t) => { t.colorSpace = THREE.SRGBColorSpace; }, undefined, () => {});
   for (const [px, pz] of LEAF_SPOTS) {
     if (Math.hypot(px - POND.x, pz - POND.z) < POND.r + 1.2) continue;   // 不落进荷池里
     const g = new THREE.Group();
-    const mound = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 8), leafMoundMat);
-    mound.scale.set(1, 0.38, 1); mound.position.y = 0.08; mound.castShadow = true; g.add(mound);
-    for (let k = 0; k < 7; k++) {
+    const mound = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 0.66),
+      new THREE.MeshBasicMaterial({ map: leafPileTex, transparent: true, depthWrite: false }));
+    mound.rotation.x = -Math.PI / 2; mound.position.y = 0.03; g.add(mound);
+    for (let k = 0; k < 6; k++) {
       const lf = new THREE.Mesh(new THREE.CircleGeometry(0.09, 6),
-        new THREE.MeshStandardMaterial({ color: k % 2 ? 0xe0b254 : 0xc98f30, roughness: 0.95, side: THREE.DoubleSide }));
+        new THREE.MeshStandardMaterial({ color: k % 2 ? 0xc9a24b : 0xa8873c, roughness: 0.95, side: THREE.DoubleSide }));
       lf.rotation.set(-Math.PI / 2 + (Math.random() - 0.5) * 0.5, Math.random() * 6.28, 0);
-      const a = Math.random() * 6.28, r = 0.55 + Math.random() * 0.45;
+      const a = Math.random() * 6.28, r = 0.42 + Math.random() * 0.28;
       lf.position.set(Math.cos(a) * r, 0.02, Math.sin(a) * r);
       lf.userData.leaf = true; g.add(lf);
     }
@@ -1978,16 +1985,17 @@ function updateLanterns() {
   wishTags = [];
   for (let i = 0; i < lanternMeshes.length; i++) {
     const g = lanternMeshes[i], lamp = i >= LANTERN_BASE ? (todayLamps[i - LANTERN_BASE] || null) : null;
+    // v3 反馈修正：愿灯要比常明灯更亮，点灯后世界内一眼能认出「多了一盏更亮的灯」
     const on = i < LANTERN_BASE || !!lamp;
-    g.children[0].material.emissiveIntensity = on ? 1.2 : 0.1;
-    g.children[1].intensity = on ? 1.1 : 0.0;
+    g.children[0].material.emissiveIntensity = lamp ? 1.75 : (on ? 1.2 : 0.1);
+    g.children[1].intensity = lamp ? 1.5 : (on ? 1.1 : 0.0);
     if (g.children[2] && g.children[2].material) g.children[2].material.opacity = on ? 0.5 : 0.06;
     const f = flames.find(x => x.group === g); if (f) f.on = on;
     g.userData.label = lamp ? ('愿灯 · ' + lamp.name + '：' + lamp.wish) : (myLamp ? '愿灯 · 已亮，可再点一盏' : '长明灯 · 点一盏');
     if (lamp) {
       const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: wishTagTexture(lamp.name), transparent: true, depthWrite: false }));
       tag.position.set(g.children[0].position.x, 4.55, -7.02);
-      tag.scale.set(0.95, 0.48, 1); scene.add(tag); wishTags.push(tag);
+      tag.scale.set(1.3, 0.62, 1); scene.add(tag); wishTags.push(tag);
     }
   }
 }
@@ -2310,11 +2318,11 @@ function updateLeafPiles(dt) {
       if (f.life <= 0) m.visible = false;
     }
     const mound = g.children[0];
-    if (mound) mound.scale.y = Math.max(0.06, mound.scale.y - dt * 0.55);
+    if (mound) { const s = Math.max(0.12, mound.scale.x - dt * 0.6); mound.scale.set(s, s, s); }
     if (time > ud.nextAt) {
       // 原地重新堆起
       ud.swept = false; ud.label = '落叶堆 · 扫一扫';
-      if (mound) mound.scale.y = ud.moundScaleY;
+      if (mound) mound.scale.set(1, 1, 1);
       for (const m of g.children) {
         if (!m.userData || !m.userData.leaf) continue;
         m.userData.fly = null; m.visible = true;
@@ -2533,8 +2541,8 @@ function toggleKneel(cushion, force) {
   if (hovered && (hovered.userData.action === 'bow' || hovered.userData.action === 'worship')) {
     el.tip.querySelector('.d').textContent = kneeling ? '起身' : '拜一拜';
   }
-  // 2.5D 小沙弥：跪拜时演「俯身礼拜」
-  if (monk2dSelf) { if (kneeling) monk2dSelf.play('bow'); else monk2dSelf.stop(); }
+  // 2.5D 小沙弥：跪拜时演「俯身礼拜」；叩首朝向固定（不再跟随走动方向随机翻转）
+  if (monk2dSelf) { if (kneeling) { monk2dSelf.setFacing(-1); monk2dSelf.play('bow'); } else monk2dSelf.stop(); }
 }
 function approachAndDo(obj) {
   const id = obj.userData.action;
@@ -3984,9 +3992,28 @@ async function boot() {
 }
 
 try { boot(); } catch (err) { console.error(err); window.__zenError = String((err && err.message) || err); }
-// 自动化冒烟钩子：仅 ?debug=1 时暴露面板开关，生产环境不挂任何全局入口
+// 自动化冒烟钩子：仅 ?debug=1 时暴露面板开关与关键对象（getter 保证拿到 boot 后的真实引用），
+// 生产环境不挂任何全局入口
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__zenDebug = { openFocus, closeFocus, FORTUNE_SLIPS, MONK_NPC_LINES };
+  window.__zenDebug = {
+    openFocus, closeFocus, FORTUNE_SLIPS, MONK_NPC_LINES,
+    monk2d: () => monk2dSelf, cat2d: () => cat2d, monkObj: () => monkObj,
+    cushions: () => cushions, leafPiles: () => leafPiles, lanternMeshes: () => lanternMeshes,
+    todayLamps: () => todayLamps, myLamp: () => myLamp,
+    measure: (obj) => {
+      const b = new THREE.Box3().setFromObject(obj);
+      const s = b.getSize(new THREE.Vector3());
+      return { x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2) };
+    },
+    canvasNonEmpty: (m2d, y0, y1) => {
+      // 采样 canvas 指定纵向区间的不透明像素数（验证道具/烟是否真的画出来）
+      const c = m2d.canvas, ctx = c.getContext('2d');
+      const d = ctx.getImageData(0, y0, c.width, y1 - y0).data;
+      let n = 0;
+      for (let i = 3; i < d.length; i += 4) if (d[i] > 10) n++;
+      return n;
+    }
+  };
 }
 // 运行期错误也要浮出来：异步加载 / 渲染循环里的异常统一送到启动兜底页显示
 window.addEventListener('unhandledrejection', (e) => {

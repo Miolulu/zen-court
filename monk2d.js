@@ -114,17 +114,21 @@ export class Monk2D {
       p.hr = [lerp(170, 138, e), lerp(272, 312, e)];
     } else if (a === 'woodfish') {
       const tap = Math.max(0, Math.sin(t / d * TAU));
+      p.tilt = 0.1;                                  // 做动作时身体微微前倾，远景也能读出「正在做」
       p.hr = [184, lerp(262, 226, tap)];
       p.hl = [92, 272];
     } else if (a === 'beads') {
       const spin = Math.sin(t / d * TAU);
+      p.tilt = 0.08;
       p.hr = [lerp(164, 150 + spin * 8, 1), lerp(272, 224, 1)];
       p.hl = [lerp(92, 106, 1), lerp(272, 224, 1)];
     } else if (a === 'lamp') {
+      p.tilt = 0.1;
       p.hr = [lerp(170, 196, e), lerp(272, 190, e)];
       p.hl = [92, 272];
     } else if (a === 'incense') {
       const lift = Math.min(1, k * 1.6);
+      p.tilt = 0.08;
       p.hl = [lerp(86, 118, e), lerp(272, 168, e)];
       p.hr = [lerp(170, 138, e), lerp(272, 168, e)];
       if (k > 0.55) this._emitSmoke();
@@ -138,7 +142,7 @@ export class Monk2D {
   }
 
   _emitSmoke() {
-    if (this.smoke.length < 24 && Math.random() < 0.5) this.smoke.push({ x: 128 + (Math.random() - 0.5) * 6, y: 66, v: 14 + Math.random() * 8, life: 1 });
+    if (this.smoke.length < 24 && Math.random() < 0.75) this.smoke.push({ x: 128 + (Math.random() - 0.5) * 6, y: 66, v: 14 + Math.random() * 8, life: 1 });
   }
 
   update(dt, camera) {
@@ -184,12 +188,16 @@ export class Monk2D {
     ctx.drawImage(img, cx - drawW / 2, groundY - drawH, drawW, drawH);
     ctx.restore();
 
-    // 道具合成（画在精灵之上，位置按精灵盒比例锚定）
+    // 道具合成（画在精灵之上，整体放大 1.45 保证远景可读；位置按精灵盒比例锚定）
     const px = cx + this.facing * drawW * 0.26, py = groundY - drawH * 0.34;
+    const ax = cx, ay = groundY - drawH * 0.4;
+    ctx.save();
+    ctx.translate(ax, ay); ctx.scale(1.45, 1.45); ctx.translate(-ax, -ay);
     if (this.action === 'woodfish') this._woodfishAt(ctx, px, py + 8);
     else if (this.action === 'beads') this._beadsAt(ctx, cx, groundY - drawH * 0.30);
     else if (this.action === 'lamp') this._lanternAt(ctx, px + this.facing * 14, groundY - drawH * 0.52);
     else if (this.action === 'incense') this._incenseAt(ctx, cx, groundY - drawH * 0.52);
+    ctx.restore();
 
     // 上香烟
     if (this.smoke.length) {
