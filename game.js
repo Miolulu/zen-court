@@ -505,6 +505,10 @@ let toadObj = null, toadParts = null;
 let flames = [], pondRings = [], pondFish = null, lure = null, wishTags = [], coinFx = [], koiSchool = [];
 // 每日愿灯（服务端按法号+日期权威限制）
 let todayLamps = [], myLamp = null, lampBusy = false, lampTimeout = null;
+let lampSlot = -1;            // 本次点灯点击的那盏灯（lanternMeshes 下标）：点哪盏哪盏亮
+let fortuneShakeT = 0;        // 签筒摇动剩余时间：点击签筒时世界内先摇一摇再出面板
+let incenseBoost = 0;         // 上香插炉后的香烟/光晕增强剩余时间
+let fortuneObj = null, incenseGlowRef = null;
 const peers = {};
 let myId = null;
 let state = 'playing';
@@ -1823,6 +1827,7 @@ function buildScene() {
   incenseMesh.userData = { action: 'incense', label: '佛前香炉 · 上香', ringPos: new THREE.Vector3(0, 0.03, -6.5), spot: new THREE.Vector3(0, 0, -4.55) };
   const incenseGlow = softGlow(2.6, 0xffb877, 0.2);
   incenseGlow.position.set(0, 1.7, 0); incenseGlow.raycast = () => {}; incenseMesh.add(incenseGlow);
+  incenseGlowRef = incenseGlow;   // 上香插炉后短时增亮（佛前反馈）
   scene.add(incenseMesh);
 
   buildPetals();
@@ -1919,6 +1924,7 @@ function buildScene() {
   fortuneCyl.traverse(o => { if (o.isMesh) o.castShadow = true; });
   fortuneCyl.userData = { action: 'fortune', label: '签筒 · 求一签', spot: new THREE.Vector3(2.6, 0, -4.5) };
   scene.add(fortuneCyl);
+  fortuneObj = fortuneCyl;   // 主循环摇签动画用
   // 拂尘：月台左前沿的木架，柄朝外垂一束白丝
   const wipeObj = new THREE.Group();
   const wStand = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.9, 10), ambienceMat());
@@ -1945,10 +1951,10 @@ function buildScene() {
   // 挂单僧：固定立于廊下东侧，点击轮转 5 句对话（静止，不巡游）
   const npcM = buildMonk(ROBE_BLUES[3]);
   monkNpc = npcM.group;
-  monkNpc.position.set(10.6, 0, -2.6);
-  monkNpc.rotation.y = Math.atan2(-10.6, 2.6);   // 面朝庭院中心
+  monkNpc.position.set(7.8, 0, 1.4);   // 东侧开阔草地：原 (10.6,-2.6) 被两棵松树夹住看不见
+  monkNpc.rotation.y = Math.atan2(-7.8, -1.4);   // 面朝庭院中心
   monkNpc.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  monkNpc.userData = { action: 'monk_npc', label: '挂单僧 · 说说话', spot: new THREE.Vector3(9.4, 0, -1.8) };
+  monkNpc.userData = { action: 'monk_npc', label: '挂单僧 · 说说话', spot: new THREE.Vector3(6.4, 0, 2.6) };
   scene.add(monkNpc);
   // 碑刻：院门南侧，石碑 + 帽 + 基座
   const steleObj = new THREE.Group();
@@ -1984,13 +1990,19 @@ function updateLanterns() {
   for (const t of wishTags) { scene.remove(t); if (t.material.map) t.material.map.dispose(); t.material.dispose(); }
   wishTags = [];
   for (let i = 0; i < lanternMeshes.length; i++) {
-    const g = lanternMeshes[i], lamp = i >= LANTERN_BASE ? (todayLamps[i - LANTERN_BASE] || null) : null;
+    const g = lanternMeshes[i];
+    // 愿灯挂位：优先用玩家点灯时记录的槽位（点哪盏哪盏亮）；服务端旧数据按顺序落位
+    const li = i - LANTERN_BASE;
+    const lamp = i >= LANTERN_BASE
+      ? (todayLamps.find(l => (l.slot != null ? l.slot === i : todayLamps.indexOf(l) === li)) || null)
+      : null;
     // v3 反馈修正：愿灯要比常明灯更亮，点灯后世界内一眼能认出「多了一盏更亮的灯」
     const on = i < LANTERN_BASE || !!lamp;
     g.children[0].material.emissiveIntensity = lamp ? 1.75 : (on ? 1.2 : 0.1);
     g.children[1].intensity = lamp ? 1.5 : (on ? 1.1 : 0.0);
     if (g.children[2] && g.children[2].material) g.children[2].material.opacity = on ? 0.5 : 0.06;
-    const f = flames.find(x => x.group === g); if (f) f.on = on;
+    const f = flames.find(x => x.group === g);
+    if (f) { f.on = on; f.boost = !!lamp; }   // 愿灯：摇曳循环按 boost 提亮，否则会被覆盖回常明亮度
     g.userData.label = lamp ? ('愿灯 · ' + lamp.name + '：' + lamp.wish) : (myLamp ? '愿灯 · 已亮，可再点一盏' : '长明灯 · 点一盏');
     if (lamp) {
       const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: wishTagTexture(lamp.name), transparent: true, depthWrite: false }));
@@ -2171,7 +2183,7 @@ function updateFlames() {
       f.mesh.material.color.setHSL(0.09, 0.85, 0.58 + w * 0.05);
     } else {
       f.mesh.scale.set(1 + w * 0.05, 1 + w * 0.08, 1 + w * 0.05);
-      if (f.on && f.light) f.light.intensity = 1.0 + w * 0.28;
+      if (f.on && f.light) f.light.intensity = (f.boost ? 1.55 : 1.0) + w * 0.28;   // 愿灯要比常明灯真的亮一截
     }
   }
 }
@@ -2378,14 +2390,15 @@ function updateHearts(dt) {
   }
 }
 function updateIncenseSmoke(dt) {
-  // 青烟被院里气流带着走；猫跑动 / 扑光点时扰动更明显
+  // 青烟被院里气流带着走；猫跑动 / 扑光点时扰动更明显；上香插炉后 incenseBoost 短时增浓
+  incenseBoost = Math.max(0, incenseBoost - dt);
   const wind = Math.sin(time * 0.43) * 0.16 +
     (catLife && (catLife.state === 'chase' || catLife.state === 'stroll') ? Math.sin(time * 1.3) * 0.22 : 0);
   for (const s of incenseSmoke) {
-    s.spr.position.y += dt * 0.42;
+    s.spr.position.y += dt * (0.42 + incenseBoost * 0.07);
     s.spr.position.x += (Math.sin(time * 0.8 + s.base) * 0.14 + wind) * dt;
     if (s.spr.position.y > 4.6) s.spr.position.y = 2.3;
-    s.spr.material.opacity = 0.3 * (1 - (s.spr.position.y - 2.3) / 2.3);
+    s.spr.material.opacity = Math.min(0.85, 0.3 * (1 - (s.spr.position.y - 2.3) / 2.3) * (1 + incenseBoost * 0.22));
   }
 }
 
@@ -2507,12 +2520,24 @@ function trigger(id, obj) {
   }
   if (id === 'sweep') { sweepLeafPile(obj); doAction(id); return; }
   // 批 1B 氛围触点：只开聚焦面板，不让小沙弥做动作、不记功德
-  if (id === 'fortune' || id === 'tree' || id === 'monk_npc' || id === 'stele' || id === 'wipe') {
+  if (id === 'fortune') {
+    // 求签：先让世界内的签筒摇一摇（可见反馈），再出签文面板
+    Sound.unlock(); fortuneShakeT = 1.4; Sound.tick();
+    setTimeout(() => { if (!focusMode) openFocus('fortune'); }, 700);
+    return;
+  }
+  if (id === 'tree' || id === 'monk_npc' || id === 'stele' || id === 'wipe') {
     Sound.unlock(); openFocus(id); return;
   }
   monkPose = id; monkPoseT = 0.8;
-  // 世界内动作演出（取代放大面板）：木鱼/念珠/点灯/上香/撸猫 直接在小沙弥身上演，不再弹窗
-  if (META[id].focus) (id === 'coin' ? openFocus(id) : worldAction(id, obj));
+  if (META[id].focus) {
+    // 上香/点灯：恢复聚焦面板交互（v57 误改成纯世界内动画，导致写愿点灯、三步上香面板不可达）
+    if (id === 'coin' || id === 'incense' || id === 'lamp') {
+      if (id === 'lamp') lampSlot = lanternMeshes.indexOf(obj);   // 点哪盏，哪盏亮
+      if (monk2dSelf && ACT2ANIM[id]) monk2dSelf.play(ACT2ANIM[id], { repeat: 1 });   // 小沙弥同时演一手
+      openFocus(id);
+    } else worldAction(id, obj);
+  }
   else doAction(id);
 }
 // 点拜垫：走到垫子上跪下并保持；再点一次才起身。换垫子视为重新礼拜。
@@ -2541,8 +2566,15 @@ function toggleKneel(cushion, force) {
   if (hovered && (hovered.userData.action === 'bow' || hovered.userData.action === 'worship')) {
     el.tip.querySelector('.d').textContent = kneeling ? '起身' : '拜一拜';
   }
-  // 2.5D 小沙弥：跪拜时演「俯身礼拜」；叩首朝向固定（不再跟随走动方向随机翻转）
-  if (monk2dSelf) { if (kneeling) { monk2dSelf.setFacing(-1); monk2dSelf.play('bow'); } else monk2dSelf.stop(); }
+  // 2.5D 小沙弥：跪拜时演「俯身礼拜」；叩首朝向按「垫子」相对殿内大佛（x=0）的东西侧翻转，
+  // 而不是按点击瞬间小沙弥的位置（否则人还在西边点东边的垫，朝向就反了）
+  if (monk2dSelf) {
+    if (kneeling) {
+      const kp = c.userData.onSpot || c.position;
+      monk2dSelf.setFacing(kp.x > 0.12 ? -1 : kp.x < -0.12 ? 1 : -1);
+      monk2dSelf.play('bow');
+    } else monk2dSelf.stop();
+  }
 }
 function approachAndDo(obj) {
   const id = obj.userData.action;
@@ -2981,6 +3013,12 @@ function bindIncense() {
     incenseStep = 0; incensePlaced += 1;
     stick.classList.remove('show', 'lit'); holder.classList.remove('active'); candle.classList.remove('active');
     Sound.chime();
+    // 佛前世界反馈：院内香烟变浓变快，香炉光晕增亮一小阵（让「上香」在场景里看得见）
+    incenseBoost = 4;
+    if (incenseGlowRef) {
+      incenseGlowRef.material.opacity = 0.55;
+      setTimeout(() => { if (incenseGlowRef) incenseGlowRef.material.opacity = 0.2; }, 2600);
+    }
     save.totalMerit += META.incense.gain; persist(); updateHUD(); Net.action('incense');
     if (sealIfFull()) {
       nudge('三炷已满 · 心诚则灵');
@@ -3154,6 +3192,7 @@ function onLampOk(m, local) {
   lampBusy = false;
   if (lampTimeout) { clearTimeout(lampTimeout); lampTimeout = null; }
   const l = m.lamp; if (!l) return;
+  if (lampSlot >= LANTERN_BASE) l.slot = lampSlot;   // 点哪盏哪盏亮：把愿灯挂到玩家点击的那盏灯位
   const first = !myLamp;                        // 批 1B：愿灯可反复放飞，功德只记首次
   myLamp = l; saveLocalLamp(l); addLamp(l);
   Sound.lamp(); Sound.chime();
@@ -3577,6 +3616,15 @@ function update(dt) {
   if (monk2dSelf) { monk2dSelf.group.position.set(monkObj.position.x, 0, monkObj.position.z); monk2dSelf.update(dt, camera); }
   if (cat2d) { cat2d.group.position.set(catObj.position.x, 0, catObj.position.z); cat2d.update(dt, camera); }
   updatePetals(dt); updateHearts(dt); updateIncenseSmoke(dt);
+  // 摇签：点签筒后短暂摇摆衰减，把「求签」演在世界里
+  if (fortuneObj && fortuneShakeT > 0) {
+    fortuneShakeT -= dt;
+    const s = Math.max(0, fortuneShakeT);
+    fortuneObj.rotation.z = Math.sin(time * 26) * 0.10 * s;
+    fortuneObj.rotation.x = Math.cos(time * 23) * 0.06 * s;
+  } else if (fortuneObj && (fortuneObj.rotation.z !== 0 || fortuneObj.rotation.x !== 0)) {
+    fortuneObj.rotation.z = 0; fortuneObj.rotation.x = 0;
+  }
 
   if (hovered) {
     const p = ringPosOf(hovered);
@@ -4000,6 +4048,14 @@ if (new URLSearchParams(location.search).has('debug')) {
     monk2d: () => monk2dSelf, cat2d: () => cat2d, monkObj: () => monkObj,
     cushions: () => cushions, leafPiles: () => leafPiles, lanternMeshes: () => lanternMeshes,
     todayLamps: () => todayLamps, myLamp: () => myLamp,
+    lampSlot: () => lampSlot, fortuneShake: () => fortuneShakeT, incenseBoost: () => incenseBoost,
+    monkPose: () => ({ pose: monk2dSelf && monk2dSelf.action, facing: monk2dSelf && monk2dSelf.facing }),
+    kneelAt: (x, z) => toggleKneel(nearestCushion(new THREE.Vector3(x, 0, z == null ? -3 : z)), true),
+    rise: () => { if (kneeling) toggleKneel(activeCushion); },
+    kneeling: () => kneeling, focusKind: () => focusKind,
+    doTrigger: (id) => trigger(id, id === 'fortune' ? fortuneObj : null),
+    npcPos: () => monkNpc && [monkNpc.position.x, monkNpc.position.z],
+    merit: () => save.totalMerit,
     measure: (obj) => {
       const b = new THREE.Box3().setFromObject(obj);
       const s = b.getSize(new THREE.Vector3());
