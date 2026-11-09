@@ -18,7 +18,7 @@
  *                    {type:'lampLit',lamp} | {type:'presence',count,total,capacity}
  *                    {type:'full',limit}（满 50 席，随后以 1008 关闭）
  *
- * 单庙上限 50 人（MAX_PLAYERS），与前端 10 列 × 5 排 = 50 张拜垫一一对应。
+ * 单庙在线上限 50 人（MAX_PLAYERS）；前端礼佛位为 6 列 × 3 排 = 18 席，疏朗布置，不再一垫一人。
  *
  * hello 用于「进庙即赐法号」的沿用：客户端把 sessionStorage 里的法号发来，
  * 合法且未被占用就沿用，否则服务端重新随机分配一个两字法号。
@@ -32,7 +32,7 @@ const path = require('path');
 const WebSocket = require('ws');
 const PORT = process.env.PORT || 8787;   // 托管平台会注入 PORT；本地默认 8787
 const ROOT = __dirname;
-const MAX_PLAYERS = 50;   // 单庙在线上限；与前端 10 列 × 5 排 = 50 张拜垫一一对应
+const MAX_PLAYERS = 50;   // 单庙在线上限（与礼佛位数量解耦，垫子疏朗布置）
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',

@@ -1,7 +1,7 @@
 /* 小沙弥静修 · 3D 真实在线原型
  * 场景布局参照 sansatemple「清缘堂」：林中敞口木构大殿 + 正中一尊大佛 + 佛后壁画 +
  * 佛前供桌 / 中轴一座香炉 + 每排 10 张、共 5 排 50 张拜垫（中轴留过道）+ 蓝衣呆萌小沙弥 + 寺猫。
- * 50 席 = 服务端 50 人在线上限，一垫一人。
+ * 礼佛位 6 列 × 3 排 = 18 席，疏朗布置；在线上限由服务端 MAX_PLAYERS 独立控制。
  * 纯场景交互：悬停高亮 → 走过去 → 才能碰；木鱼/念珠/上香/撸猫/点灯有独立放大界面。
  * 生态：寺猫自主巡游/洗脸/打盹/扑落花/蹲蒲团/蹭人/被木鱼惊到，烛火、香烟、池水、鱼、
  *       小沙弥待机呼吸眨眼也各有生命感；点灯每人每日一盏，全庙共见愿望。
@@ -129,14 +129,14 @@ const META = {
 };
 // 布局对齐 sansatemple「清缘堂」：正中一尊大佛 + 佛后壁画 + 佛前供桌 + 中轴香炉 + 成排拜垫。
 // 原站每排 10 垫、共 10 排 100 席（对应单房 100 人，fr(i): x=(e-5)*2.4/(e-4)*2.4, z=-8.4+排*2.8）。
-// 本 demo 上限 50 人，故 10 列 × 5 排 = 50 席，一垫一人、中轴留过道。
+// 氛围观赏型：6 列 × 3 排 = 18 席，间距拉开、单垫放大，殿前留白让佛堂成为主体。
 // 拜垫区从月台前沿（z=-5.0）之后开始，石灯 / 石栏 / 荷池全部让到阵列之外，不再压在垫子上。
-const CUSHION_COLS = 10, CUSHION_ROWS = 5;
-const CUSHION_X_STEP = 1.5, CUSHION_Z_STEP = 1.95, CUSHION_Z0 = -3.9;
+const CUSHION_COLS = 6, CUSHION_ROWS = 3;      // 18 席，不再密铺 50 张
+const CUSHION_X_STEP = 2.45, CUSHION_Z_STEP = 2.9, CUSHION_Z0 = -3.9;  // 净间隙 X 0.82 / Z 1.27，疏朗
 const TERRACE_TOP = 0.16, TERRACE_FRONT = -5.0;      // 月台高度与前沿
 const POND = { x: 0, z: 7.0, r: 2.35, spot: { x: 3.15, z: 7.0 } };  // 荷池居院子正中（中轴上、拜垫之南）：金蟾蹲池心石上，东岸立足投币
-const CUSHION_HALF_W = 7.5 + 0.7, CUSHION_BACK = CUSHION_Z0 - 0.7, CUSHION_FRONT = CUSHION_Z0 + (CUSHION_ROWS - 1) * CUSHION_Z_STEP + 0.7;
-const CUSHION_SEATS = CUSHION_COLS * CUSHION_ROWS;   // 50 席 = 50 人上限
+const CUSHION_HALF_W = (CUSHION_COLS - 1) / 2 * CUSHION_X_STEP + 0.7, CUSHION_BACK = CUSHION_Z0 - 0.7, CUSHION_FRONT = CUSHION_Z0 + (CUSHION_ROWS - 1) * CUSHION_Z_STEP + 0.7;
+const CUSHION_SEATS = CUSHION_COLS * CUSHION_ROWS;   // 18 席礼佛位（在线容量另由 MAX_PLAYERS 决定）
 const MAIN_BUDDHA = {
   x: 0, y: 0, z: -11.4, scale: 1.0, big: true,
   title: '静照', wish: '大佛', color: 0xe8c275, robe: 0xc79a4e, prop: 'lotus'
@@ -743,7 +743,7 @@ function buildStatue(def) {
   nicheBack.position.set(0, 3.62, -0.94); g.add(nicheBack);
 
   // 立绘背后的柔光：慢慢呼吸，光效由代码叠加而不是画进图里；压在立绘之后渲染
-  statueHalo = softGlow(6.2, 0xffdca2, 0.18);
+  statueHalo = softGlow(6.6, 0xffdca2, 0.18);
   statueHalo.position.set(0, 3.75, -0.8); statueHalo.renderOrder = 1; g.add(statueHalo);
 
   // 立体坐佛（Blender 建模 buddha.glb）：结跏趺坐 + 螺髻 + 禅定印，坐在金边莲台上；
@@ -751,7 +751,7 @@ function buildStatue(def) {
   if (GLB_CACHE.buddha) {
     const bd = GLB_CACHE.buddha.clone(true);
     applyGameMaterials(bd);
-    bd.scale.setScalar(1.95);
+    bd.scale.setScalar(2.08);   // 主尊略增存在感，佛龛木框 6.4 高仍框得住
     bd.position.set(0, 1.02, -0.2);
     g.add(bd);
   } else {
@@ -1305,7 +1305,7 @@ function buildScene() {
   };
   scene.add(st); statues.push(st);
 
-  // 佛前拜垫：每排 10 个、共 5 排 50 席，中轴留过道。
+  // 佛前拜垫：6 列 × 3 排 18 席，疏朗错列、中轴留过道，殿前留出礼佛空地。
   // 压到约 0.28 高的扁蒲团（真实蒲团厚度），人跪上去才不会半个身子插进垫子里
   const clothMap = Tex.tile('fabric.png', 1, 1);
   const cushionGeo = new THREE.SphereGeometry(0.68, 20, 14);
@@ -1319,8 +1319,9 @@ function buildScene() {
           map: clothMap, color: tone,
           roughness: 0.96, emissive: 0xffc46a, emissiveIntensity: 0
         }));
-    if (!GLB_CACHE.cushion) { c.scale.set(1, 0.2, 1); c.position.set(cx, 0.14, cz); clothMat = c.material; }
+    if (!GLB_CACHE.cushion) { c.scale.set(1.18, 0.24, 1.18); c.position.set(cx, 0.14, cz); clothMat = c.material; }
     else {
+      c.scale.setScalar(1.18);   // 单垫直径 1.38 → 1.63，跪拜位更实在
       c.position.set(cx, 0.005, cz);
       clothMat = new THREE.MeshStandardMaterial({
         map: clothMap, color: tone,
@@ -1349,7 +1350,7 @@ function buildScene() {
   };
   for (let row = 0; row < CUSHION_ROWS; row++) {
     for (let col = 0; col < CUSHION_COLS; col++) {
-      const cx = (col < 5 ? (col - 5) * CUSHION_X_STEP : (col - 4) * CUSHION_X_STEP)
+      const cx = (col - (CUSHION_COLS - 1) / 2) * CUSHION_X_STEP
         + (row % 2 ? 0.16 : -0.16);
       const cz = CUSHION_Z0 + row * CUSHION_Z_STEP;
       makeCushion(row, col, cx, cz);
@@ -3043,10 +3044,9 @@ async function boot() {
   });
   Net.on('peerLeave', (m) => { const p = peers[m.id]; if (p) { if (p.label) p.label.remove(); scene.remove(p.group); delete peers[m.id]; } });
   Net.on('presence', (m) => {
-    const cap = m.capacity || CAPACITY;
     if (m.count < 0) el.presence.textContent = '未连接 · 庙中空着';
-    else if (m.count <= 0) el.presence.textContent = '此刻庙中唯有你一人 · 全庙 ' + cap + ' 席';
-    else el.presence.textContent = '此刻庙中另有 ' + m.count + ' 位同修 · 全庙 ' + cap + ' 席';
+    else if (m.count <= 0) el.presence.textContent = '此刻庙中唯有你一人 · 佛前 ' + CUSHION_SEATS + ' 席';
+    else el.presence.textContent = '此刻庙中另有 ' + m.count + ' 位同修 · 佛前 ' + CUSHION_SEATS + ' 席';
   });
   Net.on('full', (m) => {
     el.presence.textContent = '庙中已满 · 稍后再来';
