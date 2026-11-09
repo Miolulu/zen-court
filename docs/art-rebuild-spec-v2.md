@@ -1,6 +1,6 @@
 # 静照院 · 全资产美术重构规格 v2（评估稿 · 待确认）
 
-> 状态：**评估稿已确认并进入施工**；批次 A / C 主体、B 池塘、E 社交已完成，详见 §11。线上版本已 bump 到 `v55`。
+> 状态：**评估稿已确认并进入施工，且 v55 已上线**。批次 A / C 主体、B 池塘、E 社交已完成，详见 §11。线上地址：`https://zen-court.app.workbuddy.host/?sharecode=W4KP6M27DR`。
 > 日期：2026-11-09 ｜ 读者：用户 / 3D 建模 / 美术 / 工程 / QA
 > 上游：`docs/gameplay-spec-v1.md`（玩法与批次）、`docs/art-prompt-pack-v1.md`（v1 风格锚点）、`docs/concept/hero-v2.png`（v2 主视觉）
 > 本轮依据：线上页面实测、`game.js` 3307 行逐段核对、`server.js` 协议核对、`threejs.cc` 案例库、网络造像/生物/游戏交互资料检索、3D 建模专家与美术总监并行评估。
@@ -529,4 +529,5 @@
 - **施工阶段**（用户「开工」后）：修改 `game.js` / `index.html` / `server.js` / `.gitignore`；新增 `blender/gen_monk_v2.py`、`blender/gen_assets_v2.py`、`assets/models/{monk_v2,cat_v2,toad_v2,koi,coin}.glb`、`tests/ws_chat_smoke.js`、`docs/art-rebuild-spec-v2.md`；运行时生成 `data/pond-coins.json`（已加入 `.gitignore`，不入库）。
 - **版本号**：`index.html` 引用 `game.js?v=55`（从 `v51` 起逐批 bump）。
 - **验证**：`node --check` 双文件、`py_compile` 双脚本、`tests/ws_chat_smoke.js` 三客户端定向路由冒烟、浏览器多轮实机截图均通过；池底币落盘 24 枚、刷新后由 `welcome.coins` 恢复。
+- **部署上线（2026-11-09）**：已通过 WorkBuddy 应用发布重新部署多人在线版，覆盖原分享链接（同 `domainPrefix=zen-court`）。线上冒烟：`tests/ws_chat_smoke.js` 指向 `wss://zen-court.app.workbuddy.host/?sharecode=W4KP6M27DR` 通过（A/B 收到 `chatReady`+`chatMsg`，C 仅 `peerGreet`+`chatMute`，`cHasChatMsg:false`）；`index.html`/`game.js?v=55`/各 `*.glb` HTTP 200。**GitHub Pages 镜像与作品集详情页同步尚未做**（属 §10.3-6 余下项）。
 - **下一轮**：见 §10.3，重点是给新 GLB 补贴图、合并 mesh 降 draw call、金蟾/锦鲤剪影复校，以及三视口与满员性能回归。
