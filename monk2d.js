@@ -48,8 +48,8 @@ export class Monk2D {
     // 从任意视角都能稳定看到纸片小沙弥及其动作。
     const mat = new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false });
     this.mesh = new THREE.Sprite(mat);
-    this.mesh.scale.set(1.2, 1.8, 1);
-    this.mesh.position.y = 0.9;
+    this.mesh.scale.set(0.95, 1.5, 1);
+    this.mesh.position.y = 0.75;
     this.mesh.raycast = () => {};
     this.group = new THREE.Group();
     this.group.add(this.mesh);
@@ -155,25 +155,25 @@ export class Monk2D {
     softShadow(ctx, cx, groundY + 4, 52);
 
     const sh = this.sash;
-    // --- 僧袍（钟形）---
+    // --- 僧袍（钟形，收窄显得更小巧）---
     ctx.fillStyle = this.robe; ctx.strokeStyle = O; ctx.lineWidth = 3; ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(cx - 30, 168);
-    ctx.quadraticCurveTo(cx - 56, 300, cx - 46, groundY);
-    ctx.lineTo(cx + 46, groundY);
-    ctx.quadraticCurveTo(cx + 56, 300, cx + 30, 168);
+    ctx.moveTo(cx - 26, 168);
+    ctx.quadraticCurveTo(cx - 46, 300, cx - 40, groundY);
+    ctx.lineTo(cx + 40, groundY);
+    ctx.quadraticCurveTo(cx + 46, 300, cx + 26, 168);
     ctx.closePath(); ctx.fill(); ctx.stroke();
     // 下摆暗部
     ctx.fillStyle = this.robeShade;
     ctx.beginPath();
-    ctx.moveTo(cx - 46, groundY); ctx.lineTo(cx + 46, groundY);
-    ctx.quadraticCurveTo(cx + 50, 330, cx + 30, 320);
-    ctx.lineTo(cx - 30, 320); ctx.quadraticCurveTo(cx - 50, 330, cx - 46, groundY);
+    ctx.moveTo(cx - 40, groundY); ctx.lineTo(cx + 40, groundY);
+    ctx.quadraticCurveTo(cx + 44, 330, cx + 28, 320);
+    ctx.lineTo(cx - 28, 320); ctx.quadraticCurveTo(cx - 44, 330, cx - 40, groundY);
     ctx.closePath(); ctx.fill();
     // 腰带
     ctx.fillStyle = sh; ctx.strokeStyle = O; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(cx - 44, 252); ctx.quadraticCurveTo(cx, 262, cx + 44, 252);
-    ctx.lineTo(cx + 40, 270); ctx.quadraticCurveTo(cx, 280, cx - 40, 270); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - 38, 252); ctx.quadraticCurveTo(cx, 262, cx + 38, 252);
+    ctx.lineTo(cx + 34, 270); ctx.quadraticCurveTo(cx, 280, cx - 34, 270); ctx.closePath(); ctx.fill(); ctx.stroke();
 
     // --- 手臂（后臂先画，避免遮挡脸）---
     const shL = [96, 174], shR = [160, 174];
@@ -268,8 +268,8 @@ export class Cat2D {
     // Sprite：永远朝向相机、永不被剔除
     const mat = new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false });
     this.mesh = new THREE.Sprite(mat);
-    this.mesh.scale.set(1.0, 0.9, 1);
-    this.mesh.position.y = 0.45; this.mesh.raycast = () => {};
+    this.mesh.scale.set(0.68, 0.56, 1);
+    this.mesh.position.y = 0.28; this.mesh.raycast = () => {};
     this.group = new THREE.Group(); this.group.add(this.mesh); this.group.raycast = () => {};
     this.action = 'idle'; this.t = 0; this.time = 0; this.facing = 1;
   }
@@ -290,9 +290,9 @@ export class Cat2D {
     ctx.beginPath(); ctx.moveTo(cx - 30, gy - 6); ctx.quadraticCurveTo(cx - 70, gy - 10, cx - 64, gy - 50); ctx.stroke();
     ctx.strokeStyle = O; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(cx - 30, gy - 6); ctx.quadraticCurveTo(cx - 70, gy - 10, cx - 64, gy - 50); ctx.stroke();
     ctx.strokeStyle = F; ctx.lineWidth = 11; ctx.beginPath(); ctx.moveTo(cx - 30, gy - 6); ctx.quadraticCurveTo(cx - 70, gy - 10, cx - 64, gy - 50); ctx.stroke();
-    // 身体
+    // 身体（略长略扁，不再是一团圆球）
     ctx.fillStyle = F; ctx.strokeStyle = O; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.ellipse(cx, gy - 18, 46, 30, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, gy - 14, 52, 26, 0, 0, TAU); ctx.fill(); ctx.stroke();
     // 斑纹
     ctx.strokeStyle = FS; ctx.lineWidth = 5;
     for (const dx of [-30, -10, 12]) { ctx.beginPath(); ctx.moveTo(cx + dx, gy - 44); ctx.lineTo(cx + dx - 4, gy - 22); ctx.stroke(); }

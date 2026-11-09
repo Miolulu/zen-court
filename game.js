@@ -199,7 +199,8 @@ const META = {
   lamp:    { name: '长明灯', verb: '点一盏灯', gain: 3, focus: true },
   incense: { name: '香炉',   verb: '上一炷香', gain: 3, focus: true },
   pet:     { name: '庙里的猫', verb: '撸一撸', gain: 1, focus: true },
-  coin:    { name: '荷池金蟾', verb: '抛一枚硬币', gain: 1, focus: true }
+  coin:    { name: '荷池金蟾', verb: '抛一枚硬币', gain: 1, focus: true },
+  sweep:   { name: '落叶堆', verb: '扫一扫', gain: 0 }
 };
 // 布局对齐 sansatemple「清缘堂」：正中一尊大佛 + 佛后壁画 + 佛前供桌 + 中轴香炉 + 成排拜垫。
 // 原站每排 10 垫、共 10 排 100 席（对应单房 100 人，fr(i): x=(e-5)*2.4/(e-4)*2.4, z=-8.4+排*2.8）。
@@ -432,7 +433,7 @@ let ground, monkObj, catObj, bowPivot, hands, woodfishMesh, beadsMesh, incenseMe
 let monk2dSelf = null, cat2d = null;   // 2.5D 纸片角色（覆盖在 3D 小沙弥 / 寺猫之上）
 let monkRig = null;   // 合十动画骨架（双手家位 + 袖臂静息角），buildMonk 时赋值
 let monkLower = null, monkKnees = null;
-let cushions = [], statues = [], lanternMeshes = [], incenseSmoke = [];
+let cushions = [], statues = [], lanternMeshes = [], incenseSmoke = [], leafPiles = [];
 let petalGeo, petalPoints, hearts = [], heartTex = null, smokeTex = null, petalCount = 150;
 let interactables = [], hoverRing = null, hovered = null, pending = null;
 let activeCushion = null;
@@ -450,6 +451,8 @@ const target = new THREE.Vector3(0, 0, 2.4);
 let monkPose = 'idle', monkPoseT = 0;
 // 猫窝放在拜垫阵列外的左前方树下，猫自己会溜进殿前、蹲蒲团、蹭人
 const catBase = new THREE.Vector3(-8.2, 0, 8.9), catTarget = catBase.clone();
+// 庭院落叶堆：银杏落叶聚成小堆，可反复扫、不限次数
+const LEAF_SPOTS = [[-12.6, 3.2], [12.9, 3.0], [-6.6, 9.6], [7.4, 9.9], [-13.6, 6.4], [13.4, 7.2]];
 let focusMode = false, focusKind = null, focusCount = 0;
 let kneeling = false, kneelT = 0;
 let monkYaw = Math.PI, monkYawTarget = Math.PI;   // 当前朝向 / 目标朝向（弧度）
@@ -1708,7 +1711,29 @@ function buildScene() {
   }
 
   }
-  // 落叶堆交互已按需求移除（不再有可扫的落叶堆）。
+  // ---- 庭院落叶堆：银杏落叶聚成小堆，点一下扫散，过几秒原地重新堆起，可反复扫、不限次数（用户要求「想扫就扫」）----
+  const leafMoundMat = new THREE.MeshStandardMaterial({ color: 0xd9a13c, roughness: 0.95 });
+  for (const [px, pz] of LEAF_SPOTS) {
+    if (Math.hypot(px - POND.x, pz - POND.z) < POND.r + 1.2) continue;   // 不落进荷池里
+    const g = new THREE.Group();
+    const mound = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 8), leafMoundMat);
+    mound.scale.set(1, 0.38, 1); mound.position.y = 0.08; mound.castShadow = true; g.add(mound);
+    for (let k = 0; k < 7; k++) {
+      const lf = new THREE.Mesh(new THREE.CircleGeometry(0.09, 6),
+        new THREE.MeshStandardMaterial({ color: k % 2 ? 0xe0b254 : 0xc98f30, roughness: 0.95, side: THREE.DoubleSide }));
+      lf.rotation.set(-Math.PI / 2 + (Math.random() - 0.5) * 0.5, Math.random() * 6.28, 0);
+      const a = Math.random() * 6.28, r = 0.55 + Math.random() * 0.45;
+      lf.position.set(Math.cos(a) * r, 0.02, Math.sin(a) * r);
+      lf.userData.leaf = true; g.add(lf);
+    }
+    g.position.set(px, 0, pz);
+    g.userData = {
+      action: 'sweep', label: '落叶堆 · 扫一扫',
+      ringPos: new THREE.Vector3(px, 0.03, pz), spot: new THREE.Vector3(px, 0, pz + 0.9),
+      moundScaleY: 0.38, swept: false, nextAt: 0
+    };
+    scene.add(g); leafPiles.push(g);
+  }
 
   // 木鱼与念珠不再摆在院子边角：改到右下角固定工具坞（见 index.html 的 .dock）
 
@@ -1798,7 +1823,7 @@ function buildScene() {
     g.position.set(0, 0.06, 0); g.raycast = () => {}; o.add(g);
   }
 
-  interactables = [ground, catObj, cat2d.group, incenseMesh, toadObj, ...cushions, ...statues, monkObj, ...lanternMeshes].filter(Boolean);
+  interactables = [ground, catObj, cat2d.group, incenseMesh, toadObj, ...cushions, ...statues, monkObj, ...lanternMeshes, ...leafPiles].filter(Boolean);
 }
 
 // 佛前三盏常明；其余按「今日愿灯」点亮，灯下挂写有法号的愿签，hover 可看完整愿望
@@ -2110,6 +2135,51 @@ function updateCoinFx(dt) {
     }
   }
 }
+// 扫落叶：叶片四散飞开、土堆塌平，片刻后在原地重新堆起；可反复扫、不限次数
+function sweepLeafPile(g) {
+  if (!g || !g.userData) return;
+  const ud = g.userData;
+  ud.swept = true;
+  ud.nextAt = time + 4;                 // 4 秒后原地重新堆起，期间随时可再点继续扫
+  ud.label = '落叶已扫 · 稍后又会落一堆';
+  for (const m of g.children) {
+    if (!m.userData || !m.userData.leaf) continue;
+    const a = Math.random() * 6.28, r = 0.8 + Math.random() * 1.6;
+    m.userData.fly = { vx: Math.cos(a) * r, vz: Math.sin(a) * r, vy: 1.1 + Math.random(), spin: (Math.random() - 0.5) * 8, life: 1 };
+  }
+}
+function updateLeafPiles(dt) {
+  for (const g of leafPiles) {
+    const ud = g.userData;
+    if (!ud || !ud.swept) continue;
+    let flying = false;
+    for (const m of g.children) {
+      if (!m.userData || !m.userData.leaf || !m.userData.fly) continue;
+      flying = true;
+      const f = m.userData.fly;
+      m.position.x += f.vx * dt; m.position.z += f.vz * dt;
+      m.position.y += f.vy * dt; f.vy -= dt * 2.6;
+      m.rotation.z += f.spin * dt;
+      if (m.position.y <= 0.02) { m.position.y = 0.02; f.vy = 0; f.vx *= 0.86; f.vz *= 0.86; }
+      f.life -= dt;
+      if (f.life <= 0) m.visible = false;
+    }
+    const mound = g.children[0];
+    if (mound) mound.scale.y = Math.max(0.06, mound.scale.y - dt * 0.55);
+    if (time > ud.nextAt) {
+      // 原地重新堆起
+      ud.swept = false; ud.label = '落叶堆 · 扫一扫';
+      if (mound) mound.scale.y = ud.moundScaleY;
+      for (const m of g.children) {
+        if (!m.userData || !m.userData.leaf) continue;
+        m.userData.fly = null; m.visible = true;
+        const a = Math.random() * 6.28, r = 0.55 + Math.random() * 0.45;
+        m.position.set(Math.cos(a) * r, 0.02, Math.sin(a) * r);
+        m.rotation.set(-Math.PI / 2 + (Math.random() - 0.5) * 0.5, Math.random() * 6.28, 0);
+      }
+    }
+  }
+}
 function updateMonkIdle() {
   // 小沙弥与同修都不是杵着的：呼吸起伏、偶尔眨眼、轻轻转头
   // 呼吸叠加在跪姿缩放之上，不能把 kneelT 算出来的压低覆盖掉
@@ -2262,6 +2332,7 @@ function doAction(id) {
   else if (id === 'beads') Sound.tick();
   else if (id === 'lamp') Sound.lamp();          // 功德与点亮由服务端的 lampOk 发放
   else if (id === 'pet') CatLife.pet();          // 猫进入被撸状态，不再被瞬移到脚边
+  else if (id === 'sweep') Sound.tick();         // 扫叶：簌的一声轻响
   Net.action(id); persist(); updateHUD();
 }
 function nearestCushion(p) {
@@ -2281,6 +2352,7 @@ function trigger(id, obj) {
     toggleKneel(nearestCushion(obj.userData.spot), true);
     return;
   }
+  if (id === 'sweep') { sweepLeafPile(obj); doAction(id); return; }
   monkPose = id; monkPoseT = 0.8;
   // 世界内动作演出（取代放大面板）：木鱼/念珠/点灯/上香/撸猫 直接在小沙弥身上演，不再弹窗
   if (META[id].focus) (id === 'coin' ? openFocus(id) : worldAction(id, obj));
@@ -3153,7 +3225,7 @@ function update(dt) {
     }
   }
 
-  updateCatLife(dt); updateFlames(); updateLure(dt); updatePond(dt); updateMonkIdle();
+  updateCatLife(dt); updateFlames(); updateLure(dt); updatePond(dt); updateLeafPiles(dt); updateMonkIdle();
   // 2.5D 纸片角色：跟随 3D 本体坐标并逐帧重绘
   if (monk2dSelf) { monk2dSelf.group.position.set(monkObj.position.x, 0, monkObj.position.z); monk2dSelf.update(dt, camera); }
   if (cat2d) { cat2d.group.position.set(catObj.position.x, 0, catObj.position.z); cat2d.update(dt, camera); }
