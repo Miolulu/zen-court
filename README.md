@@ -122,3 +122,11 @@ AI 生成原图保留在 `assets/art/backdrop.png` / `buddha.png`，运行时用
 - ✅ 历史项：按 `sansatemple.com` 前端包读出的布局常量重构（一尊大佛 + 一座佛前香炉 + 10 列 × 5 排 50 席）、50 席上限、猫生态、双标签互见与走动同步、点灯愿望全庙同步、上香三步、念珠竖拨、木鱼棒，均在前几轮浏览器实测通过。
 - ⚠️ 音效需用户手势解锁，自动化无法听感验证；诵经氛围音仍是实时合成，非真人诵经录音。
 - ⏳ 公网部署（有公网 IP 的节点 + HTTPS/WSS）尚未实施；当前为本地 / 局域网同源访问。
+
+## 美术规范 v2（清雅水墨国风）
+
+- 风格锚点、色板（宣纸米 / 墨青 / 低饱和朱砂 + 旧金）、变量槽位表、三视图一致性规则与三级降级方案：见 [`docs/art-prompt-pack-v1.md`](docs/art-prompt-pack-v1.md)。
+- 主视觉概念稿：[`docs/concept/hero-v1.png`](docs/concept/hero-v1.png)（已裁去平台水印，原稿在 `docs/concept/old/`）。
+- 六个放大交互面板（木鱼 / 念珠 / 长明灯 / 上香 / 撸猫 / 抛币）不使用 CSS 拟物绘制，而是复用 `buildCat()` / `buildToad()` / `buildIncenseBurner()` 等建模函数，用主 renderer 的 `WebGLRenderTarget` 离屏渲染成透明 PNG（见 `renderPropSprite()`）；生成失败会自动回退到原 CSS 画法，不影响交互。
+- 手机端：竖屏 / 横屏断点在 `index.html`，竖屏专用相机与触摸命中容差在 `game.js`，出生点分槽在 `server.js`。
+
